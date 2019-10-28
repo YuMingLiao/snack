@@ -43,6 +43,8 @@ rec {
       drv = runCommand name {}
         ''
           mkdir -p $out/bin
+          echo "trace: ghc ${lib.strings.escapeShellArgs objList}"
+
           ${ghc}/bin/ghc \
             ${lib.strings.escapeShellArgs packageList} \
             ${lib.strings.escapeShellArgs objList} \
@@ -62,6 +64,7 @@ rec {
     foldDAG
       { f = mod:
           { "${mod.moduleName}" =
+            # need to give it imported modules's obj info.
             "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";
           };
         elemLabel = mod: mod.moduleName;
@@ -73,6 +76,9 @@ rec {
 
   buildModule = ghcWith: modSpec:
     let
+      objAttrs = lib.foldl (a: b: a // b) {} (map (mod: {"${mod.moduleName}" = "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";}) modSpec.moduleImports);
+      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
+      packageList = map (p: "-package ${p}") deps;
       ghc = ghcWith deps;
       deps = allTransitiveDeps [modSpec];
       exts = modSpec.moduleExtensions;
@@ -140,7 +146,15 @@ rec {
           echo "Compiling module ${modSpec.moduleName}"
           # Set a tmpdir we have control over, otherwise GHC fails, not sure why
           mkdir -p tmp
-          ghc -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c \
+          echo "trace: buildModule: ghc 
+                ${lib.strings.escapeShellArgs objList} \
+                -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c \
+                -outputdir $out \
+                ${ghcOptsArgs} \
+                2>&1"
+          ghc ${lib.strings.escapeShellArgs packageList} \
+            ${lib.strings.escapeShellArgs objList} \
+            -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c \
             -outputdir $out \
             ${ghcOptsArgs} \
             2>&1
