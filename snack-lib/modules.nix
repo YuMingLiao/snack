@@ -4,6 +4,8 @@
 , runCommand
 , glibcLocales
 , haskellPackages
+, symlinkJoin
+, rsync
 }:
 
 with (callPackage ./files.nix {});
@@ -31,9 +33,9 @@ rec {
     "${singleOut base (moduleToFile mod)}/${moduleToFile mod}";
 
   # Generate a list of haskell module names needed by the haskell file
-  listModuleImports = baseByModuleName: extsByModuleName: modName:
+  listModuleImports = filesByModuleName: baseByModuleName: extsByModuleName: modName:
     builtins.fromJSON
-     (builtins.readFile (listAllModuleImportsJSON baseByModuleName extsByModuleName modName))
+     (builtins.readFile (listAllModuleImportsJSON filesByModuleName baseByModuleName extsByModuleName modName))
     ;
 
   # Whether the file is a Haskell module or not. It uses very simple
@@ -51,24 +53,33 @@ rec {
 
   # Lists all module dependencies, not limited to modules existing in this
   # project
-  listAllModuleImportsJSON = baseByModuleName: extsByModuleName: modName:
+  listAllModuleImportsJSON = filesByModuleName: baseByModuleName: extsByModuleName: modName:
     let
+      extraFiles = filesByModuleName modName;
+      extraFiles' = map (x: x + "/") extraFiles;
       base = baseByModuleName modName;
       modExts =
         lib.strings.escapeShellArgs
           (map (x: "-X${x}") (extsByModuleName modName));
       ghc = haskellPackages.ghcWithPackages (ps: [ ps.ghc ]);
       importParser = runCommand "import-parser"
-        { buildInputs = [ ghc ];
+        { 
+         buildInputs = [ ghc ];
         } "ghc -Wall -Werror -package ghc ${./Imports.hs} -o $out" ;
+
     # XXX: this command needs ghc in the environment so that it can call "ghc
     # --print-libdir"...
     in runCommand "dependencies-json"
-      {   buildInputs = [ ghc glibcLocales ];
+      {   buildInputs = [ ghc glibcLocales rsync];
           LANG="en_US.utf-8";
-      }
+     }
 
         ''
-          ${importParser} ${singleOutModulePath base modName} ${modExts} > $out
+          echo ${modName}
+          ${importParser} ${singleOutModulePath base modName} ${modExts} -optP-include -optP${/root/snack/macros/cabal_macros.h} > $out
         '';
+    pkgSpecAndBaseByModName = topPkgSpec:
+      let writeJson = name: tree: writeText name (builtins.toJSON tree);
+          dict = 
+      in writeJson "pkgSpecAndBaseByModName" dict;
 }

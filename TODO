@@ -1,0 +1,11 @@
+guessing...
+
+. vs $out (read-only)
+.o                     Lib1 Lib2 OK, but not found TutorialD.Interpreter.Base
+     .o                createDirectory failed, permission denied.
+
+
+took out -i$out
+
+
+It took long time even dependency-json is built before.

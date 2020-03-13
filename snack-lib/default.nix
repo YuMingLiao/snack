@@ -6,11 +6,12 @@
 , ghc-version ? "ghc864"
 , ghcWithPackages ? pkgs.haskell.packages.${ghc-version}.ghcWithPackages
 , haskellPackages ? pkgs.haskell.packages.${ghc-version}
+, buildInputs ? []
 }:
 
 with pkgs;
 
-with (callPackage ./build.nix {});
+with (callPackage ./build.nix {customBuildInputs = buildInputs; });
 with (callPackage ./files.nix {});
 with (callPackage ./ghci.nix {});
 with (callPackage ./lib.nix {});
@@ -40,7 +41,7 @@ with rec
   # Build a package spec as resp. a library and an executable
 
   buildAsLibrary = pkgSpec:
-    buildLibrary ghcWith (libraryModSpecs pkgSpec);
+    buildLibrary ghcWith (builtins.trace "entering libraryModSpecs" (libraryModSpecs pkgSpec));
 
   buildAsExecutable = pkgSpec:
     let
@@ -60,6 +61,8 @@ with rec
   inferBuild = packageFile:
     mkPackages (specsFromPackageFile packageFile);
 
+
+      # let memo = f: modNames: builtins.listToAttrs (map (a: { name = a; value = f a; }) modNames);
   mkPackages = pkgSpecs: writeText "build.json"
     ( builtins.toJSON
       ( builtins.map
@@ -103,21 +106,21 @@ with rec
 
   libraryModSpecs = pkgSpec:
     let
-      moduleSpecFold' = modSpecFoldFromPackageSpec pkgSpec;
-      modNames = pkgs.lib.concatMap listModulesInDir pkgSpec.packageSourceDirs;
-      fld = moduleSpecFold' modSpecs';
-      modSpecs' = foldDAG fld modNames;
-      modSpecs = builtins.attrValues modSpecs';
+      moduleSpecFold' = builtins.trace "entering modSpecFoldFromPackageSec" (modSpecFoldFromPackageSpec pkgSpec);
+      modNames = builtins.trace "entering modNames" (pkgs.lib.concatMap listModulesInDir (lib.debug.traceValSeq pkgSpec.packageSourceDirs));
+      fld = builtins.trace "entering moduleSpecFold'" (moduleSpecFold' modSpecs');
+      modSpecs' = builtins.trace "evaluating modSpecs'" (foldDAG fld modNames);
+      modSpecs = builtins.trace "evaluating modSpec" (builtins.attrValues modSpecs');
     in modSpecs;
 
   executableMainModSpec = pkgSpec:
     let
-      moduleSpecFold' = modSpecFoldFromPackageSpec pkgSpec;
-      mainModName = pkgSpec.packageMain;
+      moduleSpecFold' = builtins.trace "entering moduleSpecFold'" (modSpecFoldFromPackageSpec pkgSpec);
+      mainModName = builtins.trace "entering mainModName" (lib.debug.traceValSeq pkgSpec.packageMain);
       mainModSpec =
         let
           fld = moduleSpecFold' modSpecs;
-          modSpecs = foldDAG fld [mainModName];
+          modSpecs = builtins.trace "entering main modSpecs" (foldDAG fld [mainModName]);
         in modSpecs.${mainModName};
     in mainModSpec;
 

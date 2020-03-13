@@ -39,7 +39,7 @@ foldDAGRec =
         else
           let acc' =
               { elem' = reduce elem' (f elem);
-                traversed = traversed // { ${label} = null; };
+                traversed = traversed // { ${label} = builtins.trace label null; };
               };
           in foldDAGRec fld acc' children;
   in lib.foldl insert acc0 roots;

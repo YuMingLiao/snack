@@ -30,6 +30,7 @@ import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
 import qualified Data.Text as T
+--import qualified Data.Text.IO as T
 import qualified Options.Applicative as Opts
 import qualified Shelly as S
 
@@ -393,11 +394,14 @@ nixBuild snackCfg extraNixArgs nixExpr =
         |]
     cliArgs :: [T.Text]
     cliArgs =
+      
+--      [ "--trace-function-calls" 
+--      , "-vvvv"
       [ "-" -- read expression from stdin
       , "--no-out-link" -- no need for roots
       -- how many jobs to run concurrently (-j)
       , "--max-jobs", T.pack (nJobsValue (nixNJobs nixCfg))
-      ] <> (concatMap toCliArgs nixArgs)
+      ] <> (concatMap toCliArgs nixArgs) 
     funArgs :: [String]
     funArgs = toFunArg <$> nixArgs
     nixArgs :: [NixArg]
@@ -516,19 +520,16 @@ decodeOrFail bs = case Aeson.decodeStrict' bs of
 -- | Run the executable with given arguments
 run :: S.FilePath -> [T.Text] -> Sh [T.Text]
 run p args = T.lines <$> S.run p args
+--run p args = T.lines <$> (S.log_stderr_with (T.writeFile "log.err") ((S.log_stdout_with (T.writeFile "log.out") (S.run p args))))
 
 -- | Run the executable with given arguments, assuming a single line of output
 runStdin1 :: T.Text -> S.FilePath -> [T.Text] -> Sh T.Text
 runStdin1 stin p args = do
-    S.echo "begin"
-    S.inspect stin
-    S.inspect p
-    S.inspect args
-    S.echo "end"
     S.setStdin stin
     run p args >>= \case
       [out] -> pure out
       xs -> throwIO $ userError $ "unexpected output: " <> show xs
+    
 
 quiet :: Sh a -> IO a
 quiet = S.shelly . S.print_stdout False

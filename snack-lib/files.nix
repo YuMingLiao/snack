@@ -1,4 +1,4 @@
-# file related operations
+# fil related operations
 { lib
 , stdenv
 , writeScript
@@ -50,9 +50,10 @@ rec {
   doesFileExist = base: filename:
     lib.lists.elem filename (listFilesInDir base);
 
+# TODO: potentially taks a lot of time by modName-based query 
   listFilesInDir = dir:
   let
-    go = dir: dirName:
+    go = dir: dirName: (
       lib.lists.concatLists
       (
         lib.attrsets.mapAttrsToList
@@ -61,9 +62,9 @@ rec {
             then
               go "${dir}/${path}" "${dirName}${path}/"
             else
-              [ "${dirName}${path}" ]
+              []
           )
           (builtins.readDir dir)
-      );
+      ));
   in go dir "";
 }

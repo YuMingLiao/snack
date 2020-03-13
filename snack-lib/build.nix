@@ -4,6 +4,7 @@
 , stdenv
 , rsync
 , symlinkJoin
+, customBuildInputs
 }:
 
 with (callPackage ./modules.nix {});
@@ -43,12 +44,11 @@ rec {
       drv = runCommand name {}
         ''
           mkdir -p $out/bin
-          echo "trace: ghc ${lib.strings.escapeShellArgs objList}"
-
           ${ghc}/bin/ghc \
             ${lib.strings.escapeShellArgs packageList} \
             ${lib.strings.escapeShellArgs objList} \
             ${ghcOptsArgs} \
+            -optP-include -optP${/root/snack/macros/cabal_macros.h} \
             -o $out/${relExePath}
         '';
     in
@@ -60,7 +60,7 @@ rec {
   # Build the given modules (recursively) using the given accumulator to keep
   # track of which modules have been built already
   # XXX: doesn't work if several modules in the DAG have the same name
-  buildModulesRec = ghcWith: empty: modSpecs:
+  buildModulesRec = ghcWith: empty: modSpecs: builtins.trace "entering buildModulesRec" (
     foldDAG
       { f = mod:
           { "${mod.moduleName}" =
@@ -72,27 +72,30 @@ rec {
         reduce = a: b: a // b;
         empty = empty;
       }
-      modSpecs;
+      modSpecs);
 
   buildModule = ghcWith: modSpec:
     let
-      objAttrs = lib.foldl (a: b: a // b) {} (map (mod: {"${mod.moduleName}" = "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";}) modSpec.moduleImports);
-      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
-      packageList = map (p: "-package ${p}") deps;
+#      objAttrs = buildModule ghcWith modSpec;
+#      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
       ghc = ghcWith deps;
       deps = allTransitiveDeps [modSpec];
       exts = modSpec.moduleExtensions;
       ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts);
       ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
       objectName = modSpec.moduleName;
-      builtDeps = map (buildModule ghcWith) (allTransitiveImports [modSpec]);
+      builtDeps =  map (buildModule ghcWith) (allTransitiveImports [modSpec]);
       depsDirs = map (x: x + "/") builtDeps;
       base = modSpec.moduleBase;
       makeSymtree =
         if lib.lists.length depsDirs >= 1
-        # TODO: symlink instead of copy
-        then "rsync -r ${lib.strings.escapeShellArgs depsDirs} ."
+        then builtins.concatStringsSep "\n" (map (x: "ln -s ${x}* .") depsDirs)
         else "";
+#      makeSymtree =
+#        if lib.lists.length depsDirs >= 1
+#        # TODO: symlink instead of copy
+#        then "rsync -r ${lib.strings.escapeShellArgs depsDirs} $out"
+#        else "";
       makeSymModule =
         # TODO: symlink instead of copy
         "rsync -r ${singleOutModule base modSpec.moduleName}/ .";
@@ -146,26 +149,18 @@ rec {
           echo "Compiling module ${modSpec.moduleName}"
           # Set a tmpdir we have control over, otherwise GHC fails, not sure why
           mkdir -p tmp
-          echo "trace: buildModule: ghc 
-                ${lib.strings.escapeShellArgs objList} \
-                -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c \
-                -outputdir $out \
-                ${ghcOptsArgs} \
-                2>&1"
-          ghc ${lib.strings.escapeShellArgs packageList} \
-            ${lib.strings.escapeShellArgs objList} \
-            -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c \
+          ghc -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c -dynamic-too \
             -outputdir $out \
             ${ghcOptsArgs} \
+            -optP-include -optP${/root/snack/macros/cabal_macros.h} \
             2>&1
-
-          ls $out
           echo "Done building module ${modSpec.moduleName}"
         '';
 
       buildInputs =
-        [ ghc
+        [ 
+          ghc
           rsync
-        ];
+        ] ++ customBuildInputs;
     };
 }
