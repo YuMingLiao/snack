@@ -1,0 +1,4 @@
+main part only modspec mainModule
+you encounter cycle when foldDAG.That's infinite loop.
+
+

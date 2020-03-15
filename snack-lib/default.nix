@@ -17,7 +17,8 @@ with (callPackage ./lib.nix {});
 with (callPackage ./modules.nix {});
 with (callPackage ./module-spec.nix {});
 with (callPackage ./package-spec.nix {});
-
+with (callPackage ./dag.nix {});
+with lib.attrsets;
 with rec
 {
   hpack = callPackage ./hpack.nix { inherit pkgDescriptionsFromPath; };
@@ -40,7 +41,7 @@ with rec
   # Build a package spec as resp. a library and an executable
 
   buildAsLibrary = pkgSpec:
-    buildLibrary ghcWith (libraryModSpecs pkgSpec);
+    buildLibrary ghcWith (traceValSeq (libraryModSpecs pkgSpec));
 
   buildAsExecutable = pkgSpec:
     let
@@ -107,7 +108,12 @@ with rec
       modNames = pkgs.lib.concatMap listModulesInDir pkgSpec.packageSourceDirs;
       fld = moduleSpecFold' modSpecs';
       modSpecs' = foldDAG fld modNames;
-      modSpecs = builtins.attrValues modSpecs';
+      importsDAG = mapAttrs (n: v: dagEntryAfter v.moduleImports v) modSpecs';
+      sortedResult = dagTopoSort importsDAG;
+      sortedModSpecs = if sortedResult ? result 
+                       then listToAttrs (map (x: nameValuePair x.name x.data) sortedResult.result) 
+                       else abort "cycles detected: ${toString sorted.cycle}";
+      modSpecs = builtins.attrValues sortedModSpecs;
     in modSpecs;
 
   executableMainModSpec = pkgSpec:
@@ -118,7 +124,12 @@ with rec
         let
           fld = moduleSpecFold' modSpecs;
           modSpecs = foldDAG fld [mainModName];
-        in modSpecs.${mainModName};
+          importsDAG = mapAttrs (n: v: dagEntryAfter v.moduleImports v) modSpecs;
+          sortedResult = dagTopoSort importsDAG;
+          sortedModSpecs = if sortedResult ? result 
+                           then listToAttrs (map (x: nameValuePair x.name x.data) sortedResult.result) 
+                           else abort "cycles detected: ${toString sorted.cycle}";
+        in sortedModSpecs.${mainModName};
     in mainModSpec;
 
   # Get a list of package descriptions from a path
