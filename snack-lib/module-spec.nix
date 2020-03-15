@@ -6,8 +6,10 @@
 with (callPackage ./modules.nix {});
 with (callPackage ./package-spec.nix {});
 with (callPackage ./lib.nix {});
-
+with builtins;
+with lib.debug;
 rec {
+
     makeModuleSpec =
     modName:
     modImports:
@@ -47,7 +49,7 @@ rec {
       modImportsNames = modName:
         lib.lists.filter
           (modName': ! builtins.isNull (baseByModuleName modName'))
-          (listModuleImports filesByModuleName baseByModuleName extsByModuleName modName);
+          (listModuleImports baseByModuleName extsByModuleName modName);
     in
       # TODO: DFS instead of Fold
       { f = modName:
@@ -68,11 +70,12 @@ rec {
         elemChildren = modImportsNames;
       };
 
+/*
   # Returns a list of all modules in the module spec graph
   flattenModuleSpec = modSpec:
     [ modSpec ] ++
       ( lib.lists.concatMap flattenModuleSpec modSpec.moduleImports );
-
+*/
   allTransitiveDeps = allTransitiveLists "moduleDependencies";
   allTransitiveGhcOpts = allTransitiveLists "moduleGhcOpts";
   allTransitiveExtensions = allTransitiveLists "moduleExtensions";
@@ -96,6 +99,75 @@ rec {
     )
       ;
 
+  # overrideDerivation doest not support functors yet.
+  modSpecMapFromPackageSpec = pkgSpec: modPkgSpecAndBaseMemo: modName:
+      let
+        modImportsNames = modName:
+         let result =
+          lib.lists.filter
+            (modName': ! builtins.isNull (baseByModuleName modName'))
+            (listModuleImports baseByModuleName extsByModuleName modName); 
+         in trace "imports for ${modName}: ${toString result}" result;
+        baseByModuleName = modName:
+          let res = (modPkgSpecAndBaseMemo ? "${modName}"); 
+          in if res then modPkgSpecAndBaseMemo."${modName}".base else null;
+        depsByModuleName = modName:
+          let res = modPkgSpecAndBaseMemo ? "${modName}"; 
+          in if res 
+          then modPkgSpecAndBaseMemo."${modName}".packageSpec.packageDependencies modName 
+          else (abort "asking dependencies for external module: ${modName}");
+        extsByModuleName = modName:
+          let res = modPkgSpecAndBaseMemo ? "${modName}"; 
+          in if res 
+          then modPkgSpecAndBaseMemo."${modName}".packageSpec.packageExtensions 
+          else (abort "asking extensions for external module: ${modName}");
+        ghcOptsByModuleName = modName:
+          let res = modPkgSpecAndBaseMemo ? "${modName}"; 
+          in if res 
+          then modPkgSpecAndBaseMemo."${modName}".packageSpec.packageGhcOpts
+          else (abort "asking ghc options for external module: ${modName}");
+     in
+      makeModuleSpec
+        modName
+        (modImportsNames modName)
+        (pkgSpec.packageExtraFiles modName)
+        (pkgSpec.packageExtraDirectories modName) 
+        (baseByModuleName modName) 
+        (depsByModuleName modName)
+        (extsByModuleName modName)
+        (ghcOptsByModuleName modName);
+
+  # to avoid repeated readDir to slow down, make a memo of pkgSpec and base per module.
+  modSpecFoldFromPackageSpec = pkgSpec: modPkgSpecAndBaseMemo: modName:
+      let
+        baseByModuleName = modName:
+          let res = (modPkgSpecAndBaseMemo ? "${modName}"); 
+          in if res then modPkgSpecAndBaseMemo."${modName}".base else null;
+        depsByModuleName = modName:
+          let res = modPkgSpecAndBaseMemo ? "${modName}"; 
+          in if res 
+          then modPkgSpecAndBaseMemo."${modName}".packageSpec.packageDependencies modName 
+          else (abort "asking dependencies for external module: ${modName}");
+        extsByModuleName = modName:
+          let res = modPkgSpecAndBaseMemo ? "${modName}"; 
+          in if res 
+          then modPkgSpecAndBaseMemo."${modName}".packageSpec.packageExtensions 
+          else (abort "asking extensions for external module: ${modName}");
+        ghcOptsByModuleName = modName:
+          let res = modPkgSpecAndBaseMemo ? "${modName}"; 
+          in if res 
+          then modPkgSpecAndBaseMemo."${modName}".packageSpec.packageGhcOpts
+          else (abort "asking ghc options for external module: ${modName}");
+     in
+        moduleSpecFold
+          { baseByModuleName = baseByModuleName;
+            filesByModuleName = pkgSpec.packageExtraFiles;
+            dirsByModuleName = pkgSpec.packageExtraDirectories;
+            depsByModuleName = depsByModuleName;
+            extsByModuleName = extsByModuleName;
+            ghcOptsByModuleName = ghcOptsByModuleName;
+          };
+/*
   # Takes a package spec and returns (modSpecs -> Fold)
   modSpecFoldFromPackageSpec = pkgSpec:
       let
@@ -128,5 +200,5 @@ rec {
             extsByModuleName = extsByModuleName;
             ghcOptsByModuleName = ghcOptsByModuleName;
           };
-
+*/
 }

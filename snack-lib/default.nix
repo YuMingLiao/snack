@@ -18,6 +18,11 @@ with (callPackage ./lib.nix {});
 with (callPackage ./modules.nix {});
 with (callPackage ./module-spec.nix {});
 with (callPackage ./package-spec.nix {});
+with (callPackage ./pkgSpecAndBaseMemo.nix {});
+with (callPackage ./dag.nix {});
+
+with builtins;
+with lib.debug;
 
 with rec
 {
@@ -41,7 +46,7 @@ with rec
   # Build a package spec as resp. a library and an executable
 
   buildAsLibrary = pkgSpec:
-    buildLibrary ghcWith (builtins.trace "entering libraryModSpecs" (libraryModSpecs pkgSpec));
+    buildLibrary ghcWith (libraryModSpecs pkgSpec);
 
   buildAsExecutable = pkgSpec:
     let
@@ -103,7 +108,16 @@ with rec
     ));
 
   # How to build resp. libraries and executables
-
+  libraryModSpecs = pkgSpec:
+    let
+      modPkgSpecAndBase = modPkgSpecAndBaseMemoFromPkgSpecs (lib.lists.unique (flattenPackages pkgSpec));
+      moduleSpecFold' = modSpecFoldFromPackageSpec pkgSpec modPkgSpecAndBase;
+      modNames = builtins.trace "entering modNames" modulesInPkgSpec pkgSpec; 
+      fld = builtins.trace "entering moduleSpecFold'" (moduleSpecFold' modSpecs');
+      modSpecs' = builtins.trace "evaluating modSpecs'" (foldDAG fld modNames);
+      modSpecs = builtins.trace "evaluating modSpec" (builtins.attrValues modSpecs');
+    in modSpecs;
+/*
   libraryModSpecs = pkgSpec:
     let
       moduleSpecFold' = builtins.trace "entering modSpecFoldFromPackageSec" (modSpecFoldFromPackageSpec pkgSpec);
@@ -112,16 +126,15 @@ with rec
       modSpecs' = builtins.trace "evaluating modSpecs'" (foldDAG fld modNames);
       modSpecs = builtins.trace "evaluating modSpec" (builtins.attrValues modSpecs');
     in modSpecs;
-
+*/
   executableMainModSpec = pkgSpec:
     let
-      moduleSpecFold' = builtins.trace "entering moduleSpecFold'" (modSpecFoldFromPackageSpec pkgSpec);
-      mainModName = builtins.trace "entering mainModName" (lib.debug.traceValSeq pkgSpec.packageMain);
-      mainModSpec =
-        let
-          fld = moduleSpecFold' modSpecs;
-          modSpecs = builtins.trace "entering main modSpecs" (foldDAG fld [mainModName]);
-        in modSpecs.${mainModName};
+      modPkgSpecAndBase = modPkgSpecAndBaseMemoFromPkgSpecs (lib.lists.unique (flattenPackages pkgSpec));
+      moduleSpecFold' = modSpecFoldFromPackageSpec pkgSpec modPkgSpecAndBase;
+      fld = builtins.trace "entering moduleSpecFold'" (moduleSpecFold' modSpecs');
+      mainModName = pkgSpec.packageMain;
+      modSpec = foldDAG fld [mainModName]; 
+      mainModSpec = modSpec."${mainModName}"; 
     in mainModSpec;
 
   # Get a list of package descriptions from a path

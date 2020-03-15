@@ -57,6 +57,7 @@ rec {
   flattenPackages = topPkgSpec:
     [topPkgSpec] ++ lib.lists.concatMap (flattenPackages) topPkgSpec.packagePackages;
 
+/*
   # Traverses all transitive packages and returns the first package spec that
   # contains a module with given name. If none is found, returns the supplied
   # default value.
@@ -64,7 +65,7 @@ rec {
     let
       foo = pkgSpec:
         lib.findFirst
-          (base: lib.lists.elem modName (builtins.trace "in pkgSpecAndBaseByModuleName ${modName}" (listModulesInDir base)))
+          (base: lib.lists.elem modName (listModulesInDir base))
           null
           pkgSpec.packageSourceDirs;
 
@@ -72,7 +73,7 @@ rec {
         (pkgSpec:
           let base = foo pkgSpec;
           in if base == null then [] else [ { inherit pkgSpec base; } ])
-        (builtins.trace "flattenPackages" (lib.lists.unique (flattenPackages topPkgSpec)));
+        (lib.lists.unique (flattenPackages topPkgSpec));
     in if lib.length bar <= 0 then null else
        if lib.length bar == 1 then lib.head bar
        else abort
@@ -83,8 +84,5 @@ rec {
       res = pkgSpecAndBaseByModuleName topPkgSpec modName;
     in if res == null then def else res.pkgSpec;
 
-    pkgsSpecAndBaseByModuleName_Memo = topPkgSpec:
-      # s."a"."b"
-      let dict = 
-      in modName: lib.attrsets.attrByPath dict (toList modName) dict { pkgSpec = null; base = null; }
+*/
 }

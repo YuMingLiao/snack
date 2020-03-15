@@ -10,7 +10,8 @@
 with (callPackage ./modules.nix {});
 with (callPackage ./lib.nix {});
 with (callPackage ./module-spec.nix {});
-
+with builtins;
+with lib.debug;
 rec {
 
   # Returns an attribute set where the keys are all the built module names and
@@ -21,12 +22,12 @@ rec {
       # XXX: the main modules need special handling regarding the object name
       { "${mainModSpec.moduleName}" =
         "${buildModule ghcWith mainModSpec}/Main.o";}
-      mainModSpec.moduleImports;
+      (trace "mainModSpec.moduleImports ${toString mainModSpec.moduleImports}" mainModSpec.moduleImports);
 
   # returns a attrset where the keys are the module names and the values are
   # the modules' object file path
   buildLibrary = ghcWith: modSpecs:
-    buildModulesRec ghcWith {} modSpecs;
+    buildModulesRec ghcWith {} (trace "buildLibrary" modSpecs);
 
   linkMainModule =
       { ghcWith
@@ -36,7 +37,7 @@ rec {
     let
       objAttrs = buildMain ghcWith moduleSpec;
       objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
-      deps = allTransitiveDeps [moduleSpec];
+      deps = trace "linkMainModule allTransitiveDeps" (allTransitiveDeps [moduleSpec]);
       ghc = ghcWith deps;
       ghcOptsArgs = lib.strings.escapeShellArgs moduleSpec.moduleGhcOpts;
       packageList = map (p: "-package ${p}") deps;
@@ -57,6 +58,8 @@ rec {
         relExePath = relExePath;
       };
 
+#  buildModulesByDagTopoSort = ghcWith: empty: modSpecs: builtins.trace "entering buildModulesRec" (
+
   # Build the given modules (recursively) using the given accumulator to keep
   # track of which modules have been built already
   # XXX: doesn't work if several modules in the DAG have the same name
@@ -73,20 +76,21 @@ rec {
         empty = empty;
       }
       modSpecs);
+      
 
   buildModule = ghcWith: modSpec:
     let
 #      objAttrs = buildModule ghcWith modSpec;
 #      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
       ghc = ghcWith deps;
-      deps = allTransitiveDeps [modSpec];
+      deps = trace "buildModule allTransitiveDeps" (allTransitiveDeps [modSpec]);
       exts = modSpec.moduleExtensions;
       ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts);
       ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
       objectName = modSpec.moduleName;
-      builtDeps =  map (buildModule ghcWith) (allTransitiveImports [modSpec]);
+      builtDeps =  map (buildModule ghcWith) (trace "buildModule allTransitiveImports" (allTransitiveImports [modSpec]));
       depsDirs = map (x: x + "/") builtDeps;
-      base = modSpec.moduleBase;
+      base = traceValSeq modSpec.moduleBase;
       makeSymtree =
         if lib.lists.length depsDirs >= 1
         then builtins.concatStringsSep "\n" (map (x: "ln -s ${x}* .") depsDirs)
@@ -96,7 +100,7 @@ rec {
 #        # TODO: symlink instead of copy
 #        then "rsync -r ${lib.strings.escapeShellArgs depsDirs} $out"
 #        else "";
-      makeSymModule =
+      makeSymModule = trace "makeSymModule"
         # TODO: symlink instead of copy
         "rsync -r ${singleOutModule base modSpec.moduleName}/ .";
       pred = file: path: type:
@@ -155,6 +159,8 @@ rec {
             -optP-include -optP${/root/snack/macros/cabal_macros.h} \
             2>&1
           echo "Done building module ${modSpec.moduleName}"
+          echo $?
+          exit $?
         '';
 
       buildInputs =

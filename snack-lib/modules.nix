@@ -33,9 +33,9 @@ rec {
     "${singleOut base (moduleToFile mod)}/${moduleToFile mod}";
 
   # Generate a list of haskell module names needed by the haskell file
-  listModuleImports = filesByModuleName: baseByModuleName: extsByModuleName: modName:
+  listModuleImports = baseByModuleName: extsByModuleName: modName:
     builtins.fromJSON
-     (builtins.readFile (listAllModuleImportsJSON filesByModuleName baseByModuleName extsByModuleName modName))
+     (builtins.readFile (listAllModuleImportsJSON baseByModuleName extsByModuleName modName))
     ;
 
   # Whether the file is a Haskell module or not. It uses very simple
@@ -53,10 +53,8 @@ rec {
 
   # Lists all module dependencies, not limited to modules existing in this
   # project
-  listAllModuleImportsJSON = filesByModuleName: baseByModuleName: extsByModuleName: modName:
+  listAllModuleImportsJSON = baseByModuleName: extsByModuleName: modName:
     let
-      extraFiles = filesByModuleName modName;
-      extraFiles' = map (x: x + "/") extraFiles;
       base = baseByModuleName modName;
       modExts =
         lib.strings.escapeShellArgs
@@ -78,8 +76,4 @@ rec {
           echo ${modName}
           ${importParser} ${singleOutModulePath base modName} ${modExts} -optP-include -optP${/root/snack/macros/cabal_macros.h} > $out
         '';
-    pkgSpecAndBaseByModName = topPkgSpec:
-      let writeJson = name: tree: writeText name (builtins.toJSON tree);
-          dict = 
-      in writeJson "pkgSpecAndBaseByModName" dict;
 }

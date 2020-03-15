@@ -8,4 +8,9 @@ guessing...
 took out -i$out
 
 
-It took long time even dependency-json is built before.
+About compling imports...
+map modNames, gets imports. and a dag
+
+Build a DAG and Detect Cycle in a Directed Graph, report the cycle.
+Topological sorting
+buildModuleBySortingResult
