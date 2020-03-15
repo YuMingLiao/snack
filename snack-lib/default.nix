@@ -131,11 +131,13 @@ with rec
     let
       modPkgSpecAndBase = modPkgSpecAndBaseMemoFromPkgSpecs (lib.lists.unique (flattenPackages pkgSpec));
       moduleSpecFold' = modSpecFoldFromPackageSpec pkgSpec modPkgSpecAndBase;
-      fld = builtins.trace "entering moduleSpecFold'" (moduleSpecFold' modSpecs');
-      mainModName = pkgSpec.packageMain;
-      modSpec = foldDAG fld [mainModName]; 
-      mainModSpec = modSpec."${mainModName}"; 
+      mainModSpec =
+        let
+          fld = moduleSpecFold' modSpecs;
+          modSpecs = foldDAG fld [mainModName];
+        in modSpecs.${mainModName};
     in mainModSpec;
+
 
   # Get a list of package descriptions from a path
   # This can be
