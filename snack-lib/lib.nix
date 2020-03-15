@@ -21,7 +21,7 @@ foldDAG' = fld: roots:
 
 # foldDAG :: Fold -> [elem] -> { label -> elem' }
 foldDAG = fld@{f, empty, elemLabel, reduce, elemChildren}: roots:
-  (foldDAGRec fld { traversed = {}; elem' = empty;} roots).elem';
+  (foldDAGRec fld { traversed = {}; fromPath=[]; elem' = empty;} roots).elem';
 
 # foldDAG' :: Fold -> { label -> elem' } -> [elem] -> { label -> elem' }
 foldDAGRec =
@@ -29,20 +29,26 @@ foldDAGRec =
     acc0:
     roots:
   let
-    insert = acc@{traversed, elem'}: elem:
+    insert = acc@{traversed, fromPath, elem'}: elem:
       let
         label = elemLabel elem;
         children = elemChildren elem;
+        fromPath' = fromPath ++ [label];
       in
-        if lib.attrsets.hasAttr label traversed
+        if builtins.elem label fromPath
+        then abort "cycle detected in this dependency path: ${toString fromPath'}"
+        else if lib.attrsets.hasAttr label traversed
         then acc
         else
           let acc' =
               { elem' = reduce elem' (f elem);
                 traversed = traversed // { ${label} = null; };
+                fromPath = fromPath';
               };
-          in foldDAGRec fld acc' children;
+          in foldDAGRec fld acc' children // {fromPath = fromPath;};
   in lib.foldl insert acc0 roots;
+
+
 
 withAttr = obj: attrName: def: f:
   if builtins.hasAttr attrName obj then f (obj.${attrName}) else  def;
