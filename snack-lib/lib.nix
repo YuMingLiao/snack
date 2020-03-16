@@ -1,5 +1,7 @@
 { lib
-}: rec {
+}:
+with builtins;
+rec {
 
 # All fold functions in this module take a record as follows:
 # { f :: elem -> elem'
@@ -31,7 +33,7 @@ foldDAGRec =
   let
     insert = acc@{traversed, elem'}: elem:
       let
-        label = elemLabel elem;
+        label = trace (elemLabel elem) (elemLabel elem);
         children = elemChildren elem;
       in
         if lib.attrsets.hasAttr label traversed

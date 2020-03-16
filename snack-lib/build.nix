@@ -25,7 +25,7 @@ rec {
   # returns a attrset where the keys are the module names and the values are
   # the modules' object file path
   buildLibrary = ghcWith: modSpecs:
-    buildModulesRec ghcWith {} modSpecs;
+    trace "buildLibrary" (buildModulesRec ghcWith {} modSpecs);
 
   linkMainModule =
       { ghcWith
@@ -60,7 +60,7 @@ rec {
   # Build the given modules (recursively) using the given accumulator to keep
   # track of which modules have been built already
   # XXX: doesn't work if several modules in the DAG have the same name
-  buildModulesRec = ghcWith: empty: modSpecs:
+  buildModulesRec = ghcWith: empty: modSpecs: trace "buildModulesRec" (
     foldDAG
       { f = mod:
           { "${mod.moduleName}" =
@@ -72,7 +72,7 @@ rec {
         reduce = a: b: a // b;
         empty = empty;
       }
-      modSpecs;
+      modSpecs);
 
   buildModule = ghcWith: modSpec:
     let
