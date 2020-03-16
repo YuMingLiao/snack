@@ -9,7 +9,7 @@
 with (callPackage ./modules.nix {});
 with (callPackage ./lib.nix {});
 with (callPackage ./module-spec.nix {});
-
+with builtins;
 rec {
 
   # Returns an attribute set where the keys are all the built module names and
@@ -82,7 +82,7 @@ rec {
       ghc = ghcWith deps;
       deps = allTransitiveDeps [modSpec];
       exts = modSpec.moduleExtensions;
-      ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts);
+      ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts) ++ (if elem "CPP" exts then ["-optP-include -optPcabal_macros.h"] else []);
       ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
       objectName = modSpec.moduleName;
       builtDeps = map (buildModule ghcWith) (allTransitiveImports [modSpec]);

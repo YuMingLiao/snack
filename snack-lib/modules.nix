@@ -2,12 +2,14 @@
 { lib
 , callPackage
 , runCommand
+, stdenv
 , glibcLocales
 , haskellPackages
+, symlinkJoin
 }:
 
 with (callPackage ./files.nix {});
-
+with builtins;
 rec {
   # Turns a module name to a file
   moduleToFile = mod:
@@ -31,9 +33,9 @@ rec {
     "${singleOut base (moduleToFile mod)}/${moduleToFile mod}";
 
   # Generate a list of haskell module names needed by the haskell file
-  listModuleImports = baseByModuleName: extsByModuleName: modName:
+  listModuleImports = baseByModuleName: filesByModuleName: dirsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:
     builtins.fromJSON
-     (builtins.readFile (listAllModuleImportsJSON baseByModuleName extsByModuleName modName))
+     (builtins.readFile (listAllModuleImportsJSON baseByModuleName filesByModuleName dirsByModuleName extsByModuleName ghcOptsByModuleName modName))
     ;
 
   # Whether the file is a Haskell module or not. It uses very simple
@@ -51,24 +53,37 @@ rec {
 
   # Lists all module dependencies, not limited to modules existing in this
   # project
-  listAllModuleImportsJSON = baseByModuleName: extsByModuleName: modName:
+  listAllModuleImportsJSON = baseByModuleName: filesByModuleName: dirsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:
     let
       base = baseByModuleName modName;
       modExts =
         lib.strings.escapeShellArgs
           (map (x: "-X${x}") (extsByModuleName modName));
       ghc = haskellPackages.ghcWithPackages (ps: [ ps.ghc ]);
+      ghcOpts = (ghcOptsByModuleName modName); 
+      ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
       importParser = runCommand "import-parser"
         { buildInputs = [ ghc ];
         } "ghc -Wall -Werror -package ghc ${./Imports.hs} -o $out" ;
     # XXX: this command needs ghc in the environment so that it can call "ghc
     # --print-libdir"...
-    in runCommand "dependencies-json"
-      {   buildInputs = [ ghc glibcLocales ];
+    in stdenv.mkDerivation
+      {   name = "dependencies-json";
+          buildInputs = [ ghc glibcLocales ];
           LANG="en_US.utf-8";
-      }
-
+          src = symlinkJoin
+          { name = "extra-files";
+            paths = [ (filesByModuleName modName)] ++ (dirsByModuleName modName);
+          };
+          phases =
+            [ "unpackPhase" "buildPhase" ];
+          buildPhase = 
         ''
-          ${importParser} ${singleOutModulePath base modName} ${modExts} > $out
+          pwd
+          ls
+          readlink -f cabal_macros.h
+          find . -name cabal_macros.h
+          ${importParser} ${singleOutModulePath base modName} ${modExts} ${ghcOptsArgs} ${if elem "CPP" (extsByModuleName modName) then "-optP-include -optPcabal_macros.h" else ""} > $out
         '';
+      };
 }
