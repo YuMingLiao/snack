@@ -98,7 +98,7 @@ rec {
       modSpecs
     )
       ;
-
+/*
   # overrideDerivation doest not support functors yet.
   modSpecMapFromPackageSpec = pkgSpec: modPkgSpecAndBaseMemo: modName:
       let
@@ -136,9 +136,9 @@ rec {
         (depsByModuleName modName)
         (extsByModuleName modName)
         (ghcOptsByModuleName modName);
-
+*/
   # to avoid repeated readDir to slow down, make a memo of pkgSpec and base per module.
-  modSpecFoldFromPackageSpec = pkgSpec: modPkgSpecAndBaseMemo: modName:
+  modSpecFoldFromPackageSpec' = pkgSpec: modPkgSpecAndBaseMemo:
       let
         baseByModuleName = modName:
           let res = (modPkgSpecAndBaseMemo ? "${modName}"); 
@@ -167,7 +167,7 @@ rec {
             extsByModuleName = extsByModuleName;
             ghcOptsByModuleName = ghcOptsByModuleName;
           };
-/*
+
   # Takes a package spec and returns (modSpecs -> Fold)
   modSpecFoldFromPackageSpec = pkgSpec:
       let
@@ -200,5 +200,4 @@ rec {
             extsByModuleName = extsByModuleName;
             ghcOptsByModuleName = ghcOptsByModuleName;
           };
-*/
 }

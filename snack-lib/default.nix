@@ -67,7 +67,6 @@ with rec
     mkPackages (specsFromPackageFile packageFile);
 
 
-      # let memo = f: modNames: builtins.listToAttrs (map (a: { name = a; value = f a; }) modNames);
   mkPackages = pkgSpecs: writeText "build.json"
     ( builtins.toJSON
       ( builtins.map
@@ -111,7 +110,7 @@ with rec
   libraryModSpecs = pkgSpec:
     let
       modPkgSpecAndBase = modPkgSpecAndBaseMemoFromPkgSpecs (lib.lists.unique (flattenPackages pkgSpec));
-      moduleSpecFold' = modSpecFoldFromPackageSpec pkgSpec modPkgSpecAndBase;
+      moduleSpecFold' = modSpecFoldFromPackageSpec' pkgSpec modPkgSpecAndBase;
       modNames = builtins.trace "entering modNames" modulesInPkgSpec pkgSpec; 
       fld = builtins.trace "entering moduleSpecFold'" (moduleSpecFold' modSpecs');
       modSpecs' = builtins.trace "evaluating modSpecs'" (foldDAG fld modNames);
@@ -129,8 +128,9 @@ with rec
 */
   executableMainModSpec = pkgSpec:
     let
-      modPkgSpecAndBase = modPkgSpecAndBaseMemoFromPkgSpecs (lib.lists.unique (flattenPackages pkgSpec));
-      moduleSpecFold' = modSpecFoldFromPackageSpec pkgSpec modPkgSpecAndBase;
+      modPkgSpecAndBase = modPkgSpecAndBaseMemoFromPkgSpecs (allTransitivePackages pkgSpec);
+      moduleSpecFold' = modSpecFoldFromPackageSpec' pkgSpec modPkgSpecAndBase;
+      mainModName = pkgSpec.packageMain;
       mainModSpec =
         let
           fld = moduleSpecFold' modSpecs;

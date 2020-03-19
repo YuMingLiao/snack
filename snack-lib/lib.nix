@@ -1,7 +1,6 @@
 { lib
-}: 
+}:
 with lib.debug;
-with builtins;
 rec {
 # All fold functions in this module take a record as follows:
 # { f :: elem -> elem'
@@ -23,7 +22,7 @@ foldDAG' = fld: roots:
 
 # foldDAG :: Fold -> [elem] -> { label -> elem' }
 foldDAG = fld@{f, empty, elemLabel, reduce, elemChildren}: roots:
-  (foldDAGRec fld { traversed = {}; elem' = empty;} (trace "entering foldDAGRec" roots)).elem';
+  (foldDAGRec fld { traversed = {}; elem' = empty;} roots).elem';
 
 # foldDAG' :: Fold -> { label -> elem' } -> [elem] -> { label -> elem' }
 foldDAGRec =
@@ -33,15 +32,15 @@ foldDAGRec =
   let
     insert = acc@{traversed, elem'}: elem:
       let
-        label = builtins.trace ("elemLabel ${elemLabel elem}") (elemLabel elem);
-        children = builtins.trace ("elemChildren ${toString (elemChildren elem)}") (elemChildren elem);
+        label = elemLabel elem;
+        children = elemChildren elem;
       in
         if lib.attrsets.hasAttr label traversed
-        then trace "${label} already met" acc
+        then acc
         else
           let acc' =
-              { elem' = trace "reducing" (reduce elem' (trace "f ing" (f elem)));
-                traversed = traversed // { ${label} = trace "meet ${label}" (label null); };
+              { elem' = reduce elem' (f elem);
+                traversed = traversed // { ${label} = null; };
               };
           in foldDAGRec fld acc' children;
   in lib.foldl insert acc0 roots;

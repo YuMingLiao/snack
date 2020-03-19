@@ -22,7 +22,7 @@ rec {
       # XXX: the main modules need special handling regarding the object name
       { "${mainModSpec.moduleName}" =
         "${buildModule ghcWith mainModSpec}/Main.o";}
-      (trace "mainModSpec.moduleImports ${toString mainModSpec.moduleImports}" mainModSpec.moduleImports);
+      (trace "mainModSpec.moduleImports" (traceValSeq mainModSpec.moduleImports));
 
   # returns a attrset where the keys are the module names and the values are
   # the modules' object file path
@@ -90,7 +90,7 @@ rec {
       objectName = modSpec.moduleName;
       builtDeps =  map (buildModule ghcWith) (trace "buildModule allTransitiveImports" (allTransitiveImports [modSpec]));
       depsDirs = map (x: x + "/") builtDeps;
-      base = traceValSeq modSpec.moduleBase;
+      base = modSpec.moduleBase;
       makeSymtree =
         if lib.lists.length depsDirs >= 1
         then builtins.concatStringsSep "\n" (map (x: "ln -s ${x}* .") depsDirs)

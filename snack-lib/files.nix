@@ -62,7 +62,7 @@ rec {
             then
               go "${dir}/${path}" "${dirName}${path}/"
             else
-              []
+              ["${dirName}${path}"]
           )
           (builtins.readDir dir)
       ));

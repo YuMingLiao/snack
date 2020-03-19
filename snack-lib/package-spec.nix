@@ -56,8 +56,8 @@ rec {
 
   flattenPackages = topPkgSpec:
     [topPkgSpec] ++ lib.lists.concatMap (flattenPackages) topPkgSpec.packagePackages;
+  allTransitivePackages = topPkgSpec: lib.lists.unique (flattenPackages topPkgSpec);
 
-/*
   # Traverses all transitive packages and returns the first package spec that
   # contains a module with given name. If none is found, returns the supplied
   # default value.
@@ -84,5 +84,5 @@ rec {
       res = pkgSpecAndBaseByModuleName topPkgSpec modName;
     in if res == null then def else res.pkgSpec;
 
-*/
+
 }
