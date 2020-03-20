@@ -12,22 +12,23 @@ with (callPackage ./lib.nix {});
 with (callPackage ./module-spec.nix {});
 with builtins;
 with lib.debug;
+with lib.attrsets;
 rec {
 
   # Returns an attribute set where the keys are all the built module names and
   # the values are the paths to the object files.
   # mainModSpec: a "main" module
   buildMain = ghcWith: mainModSpec:
-    buildModulesRec ghcWith
+    buildModulesTopoSort ghcWith
       # XXX: the main modules need special handling regarding the object name
       { "${mainModSpec.moduleName}" =
-        "${buildModule ghcWith mainModSpec}/Main.o";}
-      (trace "mainModSpec.moduleImports" (traceValSeq mainModSpec.moduleImports));
+        "${buildModule ghcWith mainModSpec []}/Main.o";}
+      (mainModSpec.moduleImports);
 
   # returns a attrset where the keys are the module names and the values are
   # the modules' object file path
   buildLibrary = ghcWith: modSpecs:
-    buildModulesRec ghcWith {} (trace "buildLibrary" modSpecs);
+    buildModulesTopoSort ghcWith {} (trace "buildLibrary\n ${toString (map (x: x.moduleName) modSpecs)}" modSpecs);
 
   linkMainModule =
       { ghcWith
@@ -37,7 +38,7 @@ rec {
     let
       objAttrs = buildMain ghcWith moduleSpec;
       objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
-      deps = trace "linkMainModule allTransitiveDeps" (allTransitiveDeps [moduleSpec]);
+      deps = moduleSpec.moduleAllTransDeps;#trace "linkMainModule allTransitiveDeps" (allTransitiveDeps [moduleSpec]);
       ghc = ghcWith deps;
       ghcOptsArgs = lib.strings.escapeShellArgs moduleSpec.moduleGhcOpts;
       packageList = map (p: "-package ${p}") deps;
@@ -58,7 +59,15 @@ rec {
         relExePath = relExePath;
       };
 
-#  buildModulesByDagTopoSort = ghcWith: empty: modSpecs: builtins.trace "entering buildModulesRec" (
+
+  buildModulesTopoSort = ghcWith: empty: modSpecs:
+    let f = mod:
+        { "${mod.moduleName}" =
+          # need to give it imported modules's obj info.
+          "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";
+        };
+    in 
+    lib.foldl (a: b: a // b) {} (map f modSpecs);
 
   # Build the given modules (recursively) using the given accumulator to keep
   # track of which modules have been built already
@@ -68,27 +77,28 @@ rec {
       { f = mod:
           { "${mod.moduleName}" =
             # need to give it imported modules's obj info.
-            "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";
+            "${buildModule ghcWith mod []}/${moduleToObject mod.moduleName}";
           };
         elemLabel = mod: mod.moduleName;
         elemChildren = mod: mod.moduleImports;
         reduce = a: b: a // b;
         empty = empty;
+        purpose = "buildModules";
       }
       modSpecs);
       
 
-  buildModule = ghcWith: modSpec:
+  buildModule = ghcWith: modSpec: trail:
     let
 #      objAttrs = buildModule ghcWith modSpec;
 #      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
       ghc = ghcWith deps;
-      deps = trace "buildModule allTransitiveDeps" (allTransitiveDeps [modSpec]);
+      deps = modSpec.moduleAllTransDeps;
       exts = modSpec.moduleExtensions;
       ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts);
       ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
       objectName = modSpec.moduleName;
-      builtDeps =  map (buildModule ghcWith) (trace "buildModule allTransitiveImports" (allTransitiveImports [modSpec]));
+      builtDeps =  map (x: buildModule ghcWith x (trail ++ [modSpec.moduleName])) (trace "${toString (trail ++ [modSpec.moduleName])}" modSpec.moduleAllTransImports);
       depsDirs = map (x: x + "/") builtDeps;
       base = modSpec.moduleBase;
       makeSymtree =
@@ -100,7 +110,7 @@ rec {
 #        # TODO: symlink instead of copy
 #        then "rsync -r ${lib.strings.escapeShellArgs depsDirs} $out"
 #        else "";
-      makeSymModule = trace "makeSymModule"
+      makeSymModule = 
         # TODO: symlink instead of copy
         "rsync -r ${singleOutModule base modSpec.moduleName}/ .";
       pred = file: path: type:

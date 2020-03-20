@@ -8,6 +8,7 @@ with (callPackage ./package-spec.nix {});
 with (callPackage ./lib.nix {});
 with builtins;
 with lib.debug;
+with lib.lists;
 rec {
 
     makeModuleSpec =
@@ -19,6 +20,8 @@ rec {
     modDeps:
     modExts:
     modGhcOpts:
+    modAllTransDeps:
+    modAllTransImports:
     { moduleName = modName;
 
       # local module imports, i.e. not part of an external dependency
@@ -33,6 +36,8 @@ rec {
         else abort "module dependencies should be a list";
       moduleGhcOpts = modGhcOpts;
       moduleExtensions = modExts;
+      moduleAllTransDeps = modAllTransDeps;
+      moduleAllTransImports = modAllTransImports;
     };
 
 
@@ -70,17 +75,12 @@ rec {
         elemChildren = modImportsNames;
       };
 
-/*
-  # Returns a list of all modules in the module spec graph
-  flattenModuleSpec = modSpec:
-    [ modSpec ] ++
-      ( lib.lists.concatMap flattenModuleSpec modSpec.moduleImports );
-*/
-  allTransitiveDeps = allTransitiveLists "moduleDependencies";
+#  allTransitiveDeps = allTransitiveLists "moduleDependencies";
   allTransitiveGhcOpts = allTransitiveLists "moduleGhcOpts";
   allTransitiveExtensions = allTransitiveLists "moduleExtensions";
   allTransitiveDirectories = allTransitiveLists "moduleDirectories";
-  allTransitiveImports = allTransitiveLists "moduleImports";
+#  allTransitiveImports = allTransitiveLists "moduleImports";
+
 
   allTransitiveLists = attr: modSpecs:
     lib.lists.unique
@@ -94,20 +94,24 @@ rec {
         elemLabel = modSpec: modSpec.moduleName;
         reduce = a: b: a ++ b;
         elemChildren = modSpec: modSpec.moduleImports;
+        purpose = "allTransitive ${attr}";
       }
       modSpecs
     )
       ;
-/*
-  # overrideDerivation doest not support functors yet.
+
+  allTransitiveDeps = topModSpec: lib.lists.unique (topModSpec.moduleDependencies ++ concatMap (x: x.moduleAllTransDeps) topModSpec.moduleImports);
+  allTransitiveImports = topModSpec: lib.lists.unique (topModSpec.moduleImports ++ concatMap (x: x.moduleAllTransImports) topModSpec.moduleImports);
+
+
+
   modSpecMapFromPackageSpec = pkgSpec: modPkgSpecAndBaseMemo: modName:
       let
+        moduleSpecMap = modSpecMapFromPackageSpec pkgSpec modPkgSpecAndBaseMemo;
         modImportsNames = modName:
-         let result =
           lib.lists.filter
             (modName': ! builtins.isNull (baseByModuleName modName'))
             (listModuleImports baseByModuleName extsByModuleName modName); 
-         in trace "imports for ${modName}: ${toString result}" result;
         baseByModuleName = modName:
           let res = (modPkgSpecAndBaseMemo ? "${modName}"); 
           in if res then modPkgSpecAndBaseMemo."${modName}".base else null;
@@ -126,17 +130,30 @@ rec {
           in if res 
           then modPkgSpecAndBaseMemo."${modName}".packageSpec.packageGhcOpts
           else (abort "asking ghc options for external module: ${modName}");
+        allTransDepByModuleName = modName:
+          let res = modPkgSpecAndBaseMemo ? "${modName}"; 
+          in if res 
+          then allTransitiveDeps (moduleSpecMap modName) 
+          else (abort "asking all transitive dependencies for external module: ${modName}");
+        allTransImportsByModuleName = modName:
+          let res = modPkgSpecAndBaseMemo ? "${modName}"; 
+          in if res 
+          then allTransitiveImports (moduleSpecMap modName)
+          else (abort "asking all transitive imports for external module: ${modName}");
+ 
      in
       makeModuleSpec
         modName
-        (modImportsNames modName)
+        (map moduleSpecMap (modImportsNames modName))
         (pkgSpec.packageExtraFiles modName)
         (pkgSpec.packageExtraDirectories modName) 
         (baseByModuleName modName) 
         (depsByModuleName modName)
         (extsByModuleName modName)
-        (ghcOptsByModuleName modName);
-*/
+        (ghcOptsByModuleName modName)
+        (allTransDepByModuleName modName)
+        (allTransImportsByModuleName modName);
+
   # to avoid repeated readDir to slow down, make a memo of pkgSpec and base per module.
   modSpecFoldFromPackageSpec' = pkgSpec: modPkgSpecAndBaseMemo:
       let

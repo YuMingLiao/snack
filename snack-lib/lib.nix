@@ -1,6 +1,8 @@
 { lib
 }:
 with lib.debug;
+with lib.lists;
+with builtins;
 rec {
 # All fold functions in this module take a record as follows:
 # { f :: elem -> elem'
@@ -21,28 +23,35 @@ foldDAG' = fld: roots:
   in map (elem: acc.${fld.elemLabel elem}) roots;
 
 # foldDAG :: Fold -> [elem] -> { label -> elem' }
-foldDAG = fld@{f, empty, elemLabel, reduce, elemChildren}: roots:
-  (foldDAGRec fld { traversed = {}; elem' = empty;} roots).elem';
+foldDAG = fld@{f, empty, elemLabel, reduce, elemChildren, purpose}: roots:
+  (foldDAGRec fld { traversed = {}; elem' = empty; path = [];} roots).elem';
 
 # foldDAG' :: Fold -> { label -> elem' } -> [elem] -> { label -> elem' }
 foldDAGRec =
-    fld@{f, empty, elemLabel, reduce, elemChildren}:
+    fld@{f, empty, elemLabel, reduce, elemChildren, purpose}:
     acc0:
     roots:
   let
-    insert = acc@{traversed, elem'}: elem:
+    insert = acc@{traversed, elem', path}: elem:
       let
         label = elemLabel elem;
         children = elemChildren elem;
       in
-        if lib.attrsets.hasAttr label traversed
+        if builtins.elem label path
+        then abort "Module imports go into cycle: ${toString (path ++ [label])}"
+        else if lib.attrsets.hasAttr label traversed
         then acc
         else
           let acc' =
               { elem' = reduce elem' (f elem);
-                traversed = traversed // { ${label} = null; };
+                traversed = trace "${purpose}: ${toString (length (attrNames traversed) + 1)}" traversed // { ${label} = null; };
+                path = path ++ [label];
               };
-          in foldDAGRec fld acc' children;
+              applyN = n: f: x: if (n == 0) then f x
+                                else if ( n > 0) then applyN (n - 1) f (f x) else abort "n < 0";
+              indent = applyN (length path) (x: x + "  ") "";
+          in (foldDAGRec fld acc' children) // {inherit path;};
+# (builtins.trace "${toString indent}${label}\n ${if children==[] then "stop" else "fold"}" 
   in lib.foldl insert acc0 roots;
 
 withAttr = obj: attrName: def: f:

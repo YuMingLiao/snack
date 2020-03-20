@@ -20,10 +20,9 @@ with (callPackage ./module-spec.nix {});
 with (callPackage ./package-spec.nix {});
 with (callPackage ./pkgSpecAndBaseMemo.nix {});
 with (callPackage ./dag.nix {});
-
 with builtins;
 with lib.debug;
-
+with lib.attrsets;
 with rec
 {
   hpack = callPackage ./hpack.nix { inherit pkgDescriptionsFromPath; };
@@ -113,9 +112,17 @@ with rec
       moduleSpecFold' = modSpecFoldFromPackageSpec' pkgSpec modPkgSpecAndBase;
       modNames = builtins.trace "entering modNames" modulesInPkgSpec pkgSpec; 
       fld = builtins.trace "entering moduleSpecFold'" (moduleSpecFold' modSpecs');
-      modSpecs' = builtins.trace "evaluating modSpecs'" (foldDAG fld modNames);
-      modSpecs = builtins.trace "evaluating modSpec" (builtins.attrValues modSpecs');
-    in modSpecs;
+      #modSpecs' = builtins.trace "evaluating modSpecs'" (foldDAG fld modNames);
+      moduleSpecMap = modSpecMapFromPackageSpec pkgSpec modPkgSpecAndBase;
+      modSpecs' = listToAttrs (map (x: nameValuePair x (moduleSpecMap x)) modNames);
+      importsDAG = mapAttrs (n: v: dagEntryAfter v.moduleImports v) modSpecs';
+      sortedResult = trace (dagTopoSort importsDAG) (dagTopoSort importsDAG);
+      sortedModSpecs' = if sortedResult ? result 
+                       then listToAttrs (map (x: nameValuePair x.name x.data) sortedResult.result) 
+                       else abort "cycles detected: ${toString sortedResult.cycle}";
+      sortedModSpecs = mapAttrs (name: v: v // { allTransDeps = allTransitiveDeps [sortedModSpecs'.${name}]; allTransImports = allTransImports [sortedModSpecs'.${name}]; }) sortedModSpecs'; 
+      modSpecs = builtins.attrValues sortedModSpecs;
+    in trace "library modSpecs: ${toString (map (x: x.moduleName) modSpecs)}" modSpecs;
 /*
   libraryModSpecs = pkgSpec:
     let
@@ -130,12 +137,28 @@ with rec
     let
       modPkgSpecAndBase = modPkgSpecAndBaseMemoFromPkgSpecs (allTransitivePackages pkgSpec);
       moduleSpecFold' = modSpecFoldFromPackageSpec' pkgSpec modPkgSpecAndBase;
+      moduleSpecMap = modSpecMapFromPackageSpec pkgSpec modPkgSpecAndBase;
+      modNames = modulesInPkgSpec pkgSpec; 
       mainModName = pkgSpec.packageMain;
       mainModSpec =
         let
           fld = moduleSpecFold' modSpecs;
-          modSpecs = foldDAG fld [mainModName];
-        in modSpecs.${mainModName};
+          modSpecs = listToAttrs (map (x: nameValuePair x (moduleSpecMap x)) modNames); #in order to detect cycles, we need all specs.
+          importsDAG = foldDAG 
+            { f = mod:
+                (n: v: dagEntryAfter v.moduleImports v) mod;
+              elemLabel = mod: mod.moduleName;
+              elemChildren = mod: mod.moduleImports;
+              reduce = a: b: a // b;
+              empty = {};
+              purpose = "buildImportsDAG from mainModSpec";
+            }
+            [modSpecs.${mainModName}]
+          sortedResult = trace (dagTopoSort importsDAG) (dagTopoSort importsDAG);
+          sortedModSpecs = if traceValSeq (sortedResult ? result)
+                           then listToAttrs (map (x: nameValuePair x.name x.data) sortedResult.result) 
+                           else abort "cycles detected: ${toString sortedResult.cycle}";
+        in sortedModSpecs.${mainModName};
     in mainModSpec;
 
 
