@@ -8,3 +8,6 @@ buildModuleBySortingResult
 
 
 move builtDeps to modSpecs. 
+
+too hairy...try implement dfsDAG with cycle detection and topological sort in another branch
+

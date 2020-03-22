@@ -110,19 +110,19 @@ with rec
     let
       modPkgSpecAndBase = modPkgSpecAndBaseMemoFromPkgSpecs (lib.lists.unique (flattenPackages pkgSpec));
       moduleSpecFold' = modSpecFoldFromPackageSpec' pkgSpec modPkgSpecAndBase;
-      modNames = builtins.trace "entering modNames" modulesInPkgSpec pkgSpec; 
+      modNames = builtins.trace "entering modNames" attrNames modPkgSpecAndBase; 
       fld = builtins.trace "entering moduleSpecFold'" (moduleSpecFold' modSpecs');
       #modSpecs' = builtins.trace "evaluating modSpecs'" (foldDAG fld modNames);
       moduleSpecMap = modSpecMapFromPackageSpec pkgSpec modPkgSpecAndBase;
       modSpecs' = listToAttrs (map (x: nameValuePair x (moduleSpecMap x)) modNames);
       importsDAG = mapAttrs (n: v: dagEntryAfter v.moduleImports v) modSpecs';
       sortedResult = trace (dagTopoSort importsDAG) (dagTopoSort importsDAG);
-      sortedModSpecs' = if sortedResult ? result 
-                       then listToAttrs (map (x: nameValuePair x.name x.data) sortedResult.result) 
+      sortedModSpecs = if sortedResult ? result 
+                       then listToAttrs (map (x: nameValuePair x.name x.data) sortedResult.result)
                        else abort "cycles detected: ${toString sortedResult.cycle}";
-      sortedModSpecs = mapAttrs (name: v: v // { allTransDeps = allTransitiveDeps [sortedModSpecs'.${name}]; allTransImports = allTransImports [sortedModSpecs'.${name}]; }) sortedModSpecs'; 
-      modSpecs = builtins.attrValues sortedModSpecs;
-    in trace "library modSpecs: ${toString (map (x: x.moduleName) modSpecs)}" modSpecs;
+      transAttrsAdded = mapAttrs (n: v: v // { moduleAllTransDep = allTransitiveDeps (sortedModSpecs.${modName});
+                                               moduleAllTransImports = allTransitiveImports (sortedModSpecs.${modName});} ) sortedModSpecs;
+    in transAttrsAdded;
 /*
   libraryModSpecs = pkgSpec:
     let
@@ -138,28 +138,36 @@ with rec
       modPkgSpecAndBase = modPkgSpecAndBaseMemoFromPkgSpecs (allTransitivePackages pkgSpec);
       moduleSpecFold' = modSpecFoldFromPackageSpec' pkgSpec modPkgSpecAndBase;
       moduleSpecMap = modSpecMapFromPackageSpec pkgSpec modPkgSpecAndBase;
-      modNames = modulesInPkgSpec pkgSpec; 
+      modNames = traceValSeq (attrNames modPkgSpecAndBase); 
       mainModName = pkgSpec.packageMain;
       mainModSpec =
         let
           fld = moduleSpecFold' modSpecs;
           modSpecs = listToAttrs (map (x: nameValuePair x (moduleSpecMap x)) modNames); #in order to detect cycles, we need all specs.
-          importsDAG = foldDAG 
+          importsDAG = mapAttrs (n: v: dagEntryAfter v.moduleImports v) modSpecs;
+          sortedResult = dagTopoSort importsDAG;
+          sortedModSpecs = if sortedResult ? result 
+                           then map (x: x.data) (trace sortedResult.result sortedResult.result)
+                           else abort "cycles detected: ${toString sortedResult.cycle}";
+ 
+          mainImportsDAG = foldDAG 
             { f = mod:
-                (n: v: dagEntryAfter v.moduleImports v) mod;
+                  { ${mod.moduleName} = dagEntryAfter mod.moduleImports mod; };
               elemLabel = mod: mod.moduleName;
               elemChildren = mod: mod.moduleImports;
               reduce = a: b: a // b;
               empty = {};
               purpose = "buildImportsDAG from mainModSpec";
             }
-            [modSpecs.${mainModName}]
-          sortedResult = trace (dagTopoSort importsDAG) (dagTopoSort importsDAG);
-          sortedModSpecs = if traceValSeq (sortedResult ? result)
-                           then listToAttrs (map (x: nameValuePair x.name x.data) sortedResult.result) 
-                           else abort "cycles detected: ${toString sortedResult.cycle}";
-        in sortedModSpecs.${mainModName};
-    in mainModSpec;
+            [sortedModSpecs.${mainModName}];
+          mainSortedResult = dagTopoSort mainImportsDAG;
+          mainSortedModSpecs = if traceValSeq (mainSortedResult ? result)
+                           then (map (x: x.data) mainSortedResult.result) 
+                           else abort "cycles detected: ${toString mainSortedResult.cycle}";
+          transAttrsAdded = mapAttrs (n: v: v // { moduleTransDep = allTransitiveDeps (sortedModSpecs.${modName});
+                                                   moduleTransImports = allTransitiveImports (sortedModSpecs.${modName});} ) mainSortedModSpecs;
+        in transAttrsAdded.${mainModName} // { mainSortedModSpecs = transAttrsAdded; };
+    in mainModSpec; 
 
 
   # Get a list of package descriptions from a path

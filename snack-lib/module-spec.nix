@@ -20,8 +20,6 @@ rec {
     modDeps:
     modExts:
     modGhcOpts:
-    modAllTransDeps:
-    modAllTransImports:
     { moduleName = modName;
 
       # local module imports, i.e. not part of an external dependency
@@ -36,8 +34,6 @@ rec {
         else abort "module dependencies should be a list";
       moduleGhcOpts = modGhcOpts;
       moduleExtensions = modExts;
-      moduleAllTransDeps = modAllTransDeps;
-      moduleAllTransImports = modAllTransImports;
     };
 
 
@@ -130,6 +126,7 @@ rec {
           in if res 
           then modPkgSpecAndBaseMemo."${modName}".packageSpec.packageGhcOpts
           else (abort "asking ghc options for external module: ${modName}");
+/*
         allTransDepByModuleName = modName:
           let res = modPkgSpecAndBaseMemo ? "${modName}"; 
           in if res 
@@ -140,7 +137,7 @@ rec {
           in if res 
           then allTransitiveImports (moduleSpecMap modName)
           else (abort "asking all transitive imports for external module: ${modName}");
- 
+*/
      in
       makeModuleSpec
         modName
@@ -150,9 +147,7 @@ rec {
         (baseByModuleName modName) 
         (depsByModuleName modName)
         (extsByModuleName modName)
-        (ghcOptsByModuleName modName)
-        (allTransDepByModuleName modName)
-        (allTransImportsByModuleName modName);
+        (ghcOptsByModuleName modName);
 
   # to avoid repeated readDir to slow down, make a memo of pkgSpec and base per module.
   modSpecFoldFromPackageSpec' = pkgSpec: modPkgSpecAndBaseMemo:

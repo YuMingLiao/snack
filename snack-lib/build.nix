@@ -13,22 +13,23 @@ with (callPackage ./module-spec.nix {});
 with builtins;
 with lib.debug;
 with lib.attrsets;
+with lib.strings;
 rec {
 
   # Returns an attribute set where the keys are all the built module names and
   # the values are the paths to the object files.
   # mainModSpec: a "main" module
   buildMain = ghcWith: mainModSpec:
-    buildModulesTopoSort ghcWith
+    mapAttrs (n: v: if n == mainModSpec.moduleName then (removeSuffix "${moduleToObject mainModSpec.moduleName}" (traceValSeq v)) + "Main.o" else v) (buildModulesTopoSort ghcWith {}
       # XXX: the main modules need special handling regarding the object name
-      { "${mainModSpec.moduleName}" =
-        "${buildModule ghcWith mainModSpec []}/Main.o";}
-      (mainModSpec.moduleImports);
+ #     { "${mainModSpec.moduleName}" =
+ #       "${buildModule ghcWith mainModSpec}/Main.o";}
+      (mainModSpec.mainSortedModSpecs));
 
   # returns a attrset where the keys are the module names and the values are
   # the modules' object file path
   buildLibrary = ghcWith: modSpecs:
-    buildModulesTopoSort ghcWith {} (trace "buildLibrary\n ${toString (map (x: x.moduleName) modSpecs)}" modSpecs);
+    buildModulesTopoSort ghcWith {} modSpecs;
 
   linkMainModule =
       { ghcWith
@@ -61,13 +62,17 @@ rec {
 
 
   buildModulesTopoSort = ghcWith: empty: modSpecs:
-    let f = mod:
+    mapAttrs (n: v: v + "/${moduleToObject n}") (buildModulesTopoSort' ghcWith empty modSpecs);
+
+  buildModulesTopoSort' = ghcWith: empty: modSpecs:
+    let 
+       f = prev: mod: let builtDeps = map (m: prev.${m}) mod.moduleImports; in
         { "${mod.moduleName}" =
           # need to give it imported modules's obj info.
-          "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";
+          "${buildModule ghcWith mod builtDeps}";
         };
     in 
-    lib.foldl (a: b: a // b) {} (map f modSpecs);
+    lib.foldl (a: b: a // f a b) {} (modSpecs);
 
   # Build the given modules (recursively) using the given accumulator to keep
   # track of which modules have been built already

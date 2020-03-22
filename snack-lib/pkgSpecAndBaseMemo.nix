@@ -70,5 +70,5 @@ rec {
                                      mods = attrNames baseMemo;
                                      pkgSpecMemo = mkPkgSpecMemo pkgSpec mods; 
                                  in  merge pkgSpecMemo baseMemo) pkgSpecs);   
-  modulesInPkgSpec = pkgSpec: attrNames (modBaseMemoFromPkgSpec pkgSpec);
+  modulesInPkgSpecs = pkgSpecs: attrNames (modPkgSpecAndBaseMemoFromPkgSpecs pkgSpecs);
 }
