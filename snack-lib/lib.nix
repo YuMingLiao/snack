@@ -1,6 +1,7 @@
 { lib
-}: rec {
-
+}:
+with builtins;
+rec {
 # All fold functions in this module take a record as follows:
 # { f :: elem -> elem'
 # , empty :: elem'
@@ -43,6 +44,43 @@ foldDAGRec =
               };
           in foldDAGRec fld acc' children;
   in lib.foldl insert acc0 roots;
+
+# dfsDAG :: DFS -> [elem] -> { label -> elem' }
+dfsDAG = dfs@{f, empty, elemLabel, reduce, elemChildren}: roots:
+  (dfsDAGRec dfs { traversed = []; path = []; elem' = empty;} roots).elem';
+
+
+# dfsDAGRec :: DFS -> { label -> elem' } -> [elem] -> { label -> elem' }
+dfsDAGRec =
+    dfs@{f, empty, elemLabel, reduce, elemChildren}:
+    acc0:
+    roots:
+  let
+    insert = acc@{traversed, path, elem'}: elem:
+      let
+        label = elemLabel elem;
+        children = elemChildren elem;
+      in
+        if lib.lists.elem label path
+        then abort "cycle: ${toString (path++[label])}"
+        else if lib.lists.elem label traversed 
+        then acc
+        else
+          let acc' =
+              { inherit elem' traversed;
+                path = path ++ [label];
+              };
+              acc'' = dfsDAGRec dfs acc' children;
+              acc''' = 
+              { elem' = reduce elem' (f elem acc''.elem');
+                traversed = traversed ++ [label];
+                path = path;
+              };
+          in acc''';
+  in lib.foldl insert acc0 roots;
+
+
+
 
 withAttr = obj: attrName: def: f:
   if builtins.hasAttr attrName obj then f (obj.${attrName}) else  def;

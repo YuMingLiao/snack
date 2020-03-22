@@ -116,8 +116,8 @@ with rec
       mainModName = pkgSpec.packageMain;
       mainModSpec =
         let
-          fld = moduleSpecFold' modSpecs;
-          modSpecs = foldDAG fld [mainModName];
+          fld = moduleSpecFold';
+          modSpecs = dfsDAG fld [mainModName];
         in modSpecs.${mainModName};
     in mainModSpec;
 

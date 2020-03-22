@@ -42,19 +42,17 @@ rec {
       , extsByModuleName
       , ghcOptsByModuleName
       }:
-      result:
     let
       modImportsNames = modName:
         lib.lists.filter
           (modName': ! builtins.isNull (baseByModuleName modName'))
           (listModuleImports baseByModuleName extsByModuleName modName);
     in
-      # TODO: DFS instead of Fold
-      { f = modName:
+      { f = modName: subModSpecs:
           { "${modName}" =
           makeModuleSpec
             modName
-            (map (mn: result.${mn}) (modImportsNames modName))
+            (map (mn: subModSpecs.${mn}) (modImportsNames modName))
             (filesByModuleName modName)
             (dirsByModuleName modName)
             (baseByModuleName modName)
