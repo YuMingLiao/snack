@@ -47,7 +47,7 @@ foldDAGRec =
 
 # dfsDAG :: DFS -> [elem] -> { label -> elem' }
 dfsDAG = dfs@{f, empty, elemLabel, reduce, elemChildren}: roots:
-  (dfsDAGRec dfs { traversed = []; path = []; elem' = empty;} roots).elem';
+  (dfsDAGRec dfs { traversed = []; path = []; elem' = empty; } roots).elem';
 
 
 # dfsDAGRec :: DFS -> { label -> elem' } -> [elem] -> { label -> elem' }
@@ -61,18 +61,18 @@ dfsDAGRec =
         label = elemLabel elem;
         children = elemChildren elem;
       in
-        if lib.lists.elem label path
+        if lib.lists.elem label (trace "${toString (path++[label])}" path)
         then abort "cycle: ${toString (path++[label])}"
         else if lib.lists.elem label traversed 
         then acc
         else
           let acc' =
-              { inherit elem' traversed;
+              { inherit traversed elem';
                 path = path ++ [label];
               };
               acc'' = dfsDAGRec dfs acc' children;
               acc''' = 
-              { elem' = reduce elem' (f elem acc''.elem');
+              { elem' = reduce acc''.elem' (f elem acc''.elem');
                 traversed = traversed ++ [label];
                 path = path;
               };

@@ -171,8 +171,9 @@ discoverPackageFile = do
 --- Nix configuration
 
 -- | How to call @nix-build@
-newtype NixConfig = NixConfig
-  { nixNJobs :: NJobs }
+data NixConfig = NixConfig
+  { nixNJobs :: NJobs
+  , nixDryRun :: Bool }
 
 data NJobs = NJobs Int | NJobsAuto
 
@@ -193,6 +194,9 @@ parseNixConfig =
         ) <|>
       pure NJobsAuto
     )
+    <*> Opts.switch
+        (Opts.long "dry-run"
+        <> Opts.help "not doing anything")
 
 
 --- Snack configuration (unrelated to packages)
@@ -397,7 +401,8 @@ nixBuild snackCfg extraNixArgs nixExpr =
       , "--no-out-link" -- no need for roots
       -- how many jobs to run concurrently (-j)
       , "--max-jobs", T.pack (nJobsValue (nixNJobs nixCfg))
-      ] <> (concatMap toCliArgs nixArgs)
+      , if nixDryRun nixCfg then "--dry-run" else ""
+      ] <> (concatMap toCliArgs nixArgs) 
     funArgs :: [String]
     funArgs = toFunArg <$> nixArgs
     nixArgs :: [NixArg]
@@ -520,11 +525,6 @@ run p args = T.lines <$> S.run p args
 -- | Run the executable with given arguments, assuming a single line of output
 runStdin1 :: T.Text -> S.FilePath -> [T.Text] -> Sh T.Text
 runStdin1 stin p args = do
-    S.echo "begin"
-    S.inspect stin
-    S.inspect p
-    S.inspect args
-    S.echo "end"
     S.setStdin stin
     run p args >>= \case
       [out] -> pure out

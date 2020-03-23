@@ -9,18 +9,22 @@
 with (callPackage ./modules.nix {});
 with (callPackage ./lib.nix {});
 with (callPackage ./module-spec.nix {});
-
+with lib.attrsets;
+with lib.strings;
+with builtins;
 rec {
 
   # Returns an attribute set where the keys are all the built module names and
   # the values are the paths to the object files.
   # mainModSpec: a "main" module
   buildMain = ghcWith: mainModSpec:
-    buildModulesRec ghcWith
+    let traversed = buildModulesRec ghcWith {} mainModSpec.moduleImports;
+        builtDeps = attrValues (mapAttrs (n: v: removeSuffix "${moduleToObject n}" v) traversed);
+        objList = map (x: traversed.${x.moduleName}) mainModSpec.moduleImports;
+    in
       # XXX: the main modules need special handling regarding the object name
-      { "${mainModSpec.moduleName}" =
-        "${buildModule ghcWith mainModSpec}/Main.o";}
-      mainModSpec.moduleImports;
+      traversed // { "${mainModSpec.moduleName}" =
+        "${buildModule ghcWith mainModSpec builtDeps objList}/Main.o";};
 
   # returns a attrset where the keys are the module names and the values are
   # the modules' object file path
@@ -61,11 +65,15 @@ rec {
   # track of which modules have been built already
   # XXX: doesn't work if several modules in the DAG have the same name
   buildModulesRec = ghcWith: empty: modSpecs:
-    foldDAG
-      { f = mod:
+    dfsDAG
+    { f = mod: traversed: 
+          let builtDeps = map (x: removeSuffix "${moduleToObject x.moduleName}" traversed.${x.moduleName} ) (allTransitiveImports [mod]);
+              objList = map (x: traversed.${x.moduleName}) mod.moduleImports;
+          in 
+          # trace "f ${mod.moduleName} ${toString (attrNames traversed)}"
           { "${mod.moduleName}" =
             # need to give it imported modules's obj info.
-            "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";
+            "${buildModule ghcWith mod builtDeps objList}/${moduleToObject mod.moduleName}";
           };
         elemLabel = mod: mod.moduleName;
         elemChildren = mod: mod.moduleImports;
@@ -74,10 +82,10 @@ rec {
       }
       modSpecs;
 
-  buildModule = ghcWith: modSpec:
+  buildModule = ghcWith: modSpec: builtDeps: objList:
     let
-      objAttrs = lib.foldl (a: b: a // b) {} (map (mod: {"${mod.moduleName}" = "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";}) modSpec.moduleImports);
-      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
+#      objAttrs = lib.foldl (a: b: a // b) {} (map (mod: {"${mod.moduleName}" = "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";}) modSpec.moduleImports);
+#      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
       packageList = map (p: "-package ${p}") deps;
       ghc = ghcWith deps;
       deps = allTransitiveDeps [modSpec];
@@ -85,13 +93,13 @@ rec {
       ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts);
       ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
       objectName = modSpec.moduleName;
-      builtDeps = map (buildModule ghcWith) (allTransitiveImports [modSpec]);
-      depsDirs = map (x: x + "/") builtDeps;
+      #builtDeps = map (buildModule ghcWith) (allTransitiveImports [modSpec]);
+      #depsDirs = map (x: x + "/") builtDeps;
       base = modSpec.moduleBase;
       makeSymtree =
-        if lib.lists.length depsDirs >= 1
+        if lib.lists.length builtDeps >= 1
         # TODO: symlink instead of copy
-        then "rsync -r ${lib.strings.escapeShellArgs depsDirs} ."
+        then "rsync -r ${lib.strings.escapeShellArgs builtDeps} ."
         else "";
       makeSymModule =
         # TODO: symlink instead of copy

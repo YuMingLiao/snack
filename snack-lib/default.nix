@@ -105,8 +105,8 @@ with rec
     let
       moduleSpecFold' = modSpecFoldFromPackageSpec pkgSpec;
       modNames = pkgs.lib.concatMap listModulesInDir pkgSpec.packageSourceDirs;
-      fld = moduleSpecFold' modSpecs';
-      modSpecs' = foldDAG fld modNames;
+      fld = moduleSpecFold';
+      modSpecs' = dfsDAG fld modNames;
       modSpecs = builtins.attrValues modSpecs';
     in modSpecs;
 

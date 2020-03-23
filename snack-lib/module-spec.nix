@@ -6,7 +6,7 @@
 with (callPackage ./modules.nix {});
 with (callPackage ./package-spec.nix {});
 with (callPackage ./lib.nix {});
-
+with builtins;
 rec {
     makeModuleSpec =
     modName:
