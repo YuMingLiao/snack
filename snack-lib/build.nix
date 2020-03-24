@@ -29,7 +29,7 @@ rec {
   # returns a attrset where the keys are the module names and the values are
   # the modules' object file path
   buildLibrary = ghcWith: modSpecs:
-    buildModulesRec ghcWith {} modSpecs;
+    trace "buildLibrary" (buildModulesRec ghcWith {} modSpecs);
 
   linkMainModule =
       { ghcWith
@@ -79,8 +79,8 @@ rec {
         elemChildren = mod: mod.moduleImports;
         reduce = a: b: a // b;
         empty = empty;
-      }
-      modSpecs;
+    }
+    modSpecs;
 
   buildModule = ghcWith: modSpec: builtDeps: objList:
     let
@@ -90,7 +90,7 @@ rec {
       ghc = ghcWith deps;
       deps = allTransitiveDeps [modSpec];
       exts = modSpec.moduleExtensions;
-      ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts);
+      ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts); #++ (if elem "CPP" exts then ["-optP-include -optPcabal_macros.h"] else []);
       ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
       objectName = modSpec.moduleName;
       #builtDeps = map (buildModule ghcWith) (allTransitiveImports [modSpec]);

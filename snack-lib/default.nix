@@ -17,7 +17,7 @@ with (callPackage ./lib.nix {});
 with (callPackage ./modules.nix {});
 with (callPackage ./module-spec.nix {});
 with (callPackage ./package-spec.nix {});
-
+with builtins;
 with rec
 {
   hpack = callPackage ./hpack.nix { inherit pkgDescriptionsFromPath; };
@@ -108,7 +108,7 @@ with rec
       fld = moduleSpecFold';
       modSpecs' = dfsDAG fld modNames;
       modSpecs = builtins.attrValues modSpecs';
-    in modSpecs;
+    in trace "modSpecs" modSpecs;
 
   executableMainModSpec = pkgSpec:
     let
