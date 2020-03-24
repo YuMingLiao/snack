@@ -46,13 +46,13 @@ foldDAGRec =
   in lib.foldl insert acc0 roots;
 
 # dfsDAG :: DFS -> [elem] -> { label -> elem' }
-dfsDAG = dfs@{f, empty, elemLabel, reduce, elemChildren}: roots:
+dfsDAG = dfs@{f, empty, elemLabel, reduce, elemChildren, ...}: roots:
   (dfsDAGRec dfs { traversed = []; path = []; elem' = empty; } roots).elem';
 
 
 # dfsDAGRec :: DFS -> { label -> elem' } -> [elem] -> { label -> elem' }
 dfsDAGRec =
-    dfs@{f, empty, elemLabel, reduce, elemChildren}:
+    dfs@{f, empty, elemLabel, reduce, elemChildren, ...}:
     acc0:
     roots:
   let

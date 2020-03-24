@@ -103,21 +103,21 @@ with rec
 
   libraryModSpecs = pkgSpec:
     let
-      moduleSpecFold' = modSpecFoldFromPackageSpec pkgSpec;
-      modNames = pkgs.lib.concatMap listModulesInDir pkgSpec.packageSourceDirs;
-      fld = moduleSpecFold';
-      modSpecs' = dfsDAG fld modNames;
+      memo = baseAndPkgSpecPerModName pkgSpec;
+      modNames = attrNames memo;
+      dfs = modSpecDFS pkgSpec memo;
+      modSpecs' = dfsDAG dfs modNames;
       modSpecs = builtins.attrValues modSpecs';
     in trace "modSpecs" modSpecs;
 
   executableMainModSpec = pkgSpec:
     let
-      moduleSpecFold' = modSpecFoldFromPackageSpec pkgSpec;
       mainModName = pkgSpec.packageMain;
       mainModSpec =
         let
-          fld = moduleSpecFold';
-          modSpecs = dfsDAG fld [mainModName];
+          memo = baseAndPkgSpecPerModName pkgSpec;
+          dfs = modSpecDFS pkgSpec memo; 
+          modSpecs = dfsDAG dfs [mainModName];
         in modSpecs.${mainModName};
     in mainModSpec;
 

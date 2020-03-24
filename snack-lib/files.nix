@@ -73,12 +73,23 @@ rec {
 */
   listFilesInDir = dir:
     dfsDAG
-    { f = info@{dir, dirName}: _: mapAttrs (path: _: {"${dirName}${path}" = null;}) (filterAttrs (path: ty: ty != "directory") (readDir dir));
+    { f = info@{dir, dirName}: _: mapAttrs (path: _: {"${dirName}${path}" = dir;}) (filterAttrs (path: ty: ty != "directory") (readDir dir));
         elemLabel = info@{dir, dirName}: dirName;
         elemChildren = info@{dir, dirName}: mapAttrsToList (path: _: {dir="${dir}/${path}"; dirName="${dirName}${path}/";}) (filterAttrs (path: ty: ty =="directory") (readDir dir));
         reduce = a: b: a // b;
         empty = {};
     }
     [{ dir=dir; dirName="";}];
+
+
+  filesWithBaseInDir = base:
+    dfsDAG
+    { f = info@{dir, dirName}: _: mapAttrs' (path: _: nameValuePair "${dirName}${path}" base) (filterAttrs (path: ty: ty != "directory") (readDir dir));
+        elemLabel = info@{dir, dirName}: dirName;
+        elemChildren = info@{dir, dirName}: mapAttrsToList (path: _: {dir="${dir}/${path}"; dirName="${dirName}${path}/";}) (filterAttrs (path: ty: ty =="directory") (readDir dir));
+        reduce = a: b: a // b;
+        empty = {};
+    }
+    [{ dir=base; dirName="";}];
 
 }

@@ -48,11 +48,11 @@ rec {
           (modName': ! builtins.isNull (baseByModuleName modName'))
           (listModuleImports baseByModuleName filesByModuleName dirsByModuleName extsByModuleName ghcOptsByModuleName modName);
     in
-      { f = modName: subModSpecs:
+      { f = modName: traversedModSpecs:
           { "${modName}" =
           makeModuleSpec
             modName
-            (map (mn: subModSpecs.${mn}) (modImportsNames modName))
+            (map (mn: traversedModSpecs.${mn}) (modImportsNames modName))
             (filesByModuleName modName)
             (dirsByModuleName modName)
             (baseByModuleName modName)
@@ -71,6 +71,7 @@ rec {
     [ modSpec ] ++
       ( lib.lists.concatMap flattenModuleSpec modSpec.moduleImports );
 
+
   allTransitiveDeps = allTransitiveLists "moduleDependencies";
   allTransitiveGhcOpts = allTransitiveLists "moduleGhcOpts";
   allTransitiveExtensions = allTransitiveLists "moduleExtensions";
@@ -80,8 +81,8 @@ rec {
   allTransitiveLists = attr: modSpecs:
     lib.lists.unique
     (
-    foldDAG
-      { f = modSpec:
+    dfsDAG
+      { f = modSpec: _:
           lib.lists.foldl
             (x: y: x ++ [y])
             [] modSpec.${attr};
@@ -95,6 +96,7 @@ rec {
       ;
 
   # Takes a package spec and returns (modSpecs -> Fold)
+
   modSpecFoldFromPackageSpec = pkgSpec:
       let
         baseByModuleName = modName:
@@ -117,6 +119,34 @@ rec {
             pkgSpec
             (abort "asking ghc options for external module: ${modName}")
             modName).packageGhcOpts;
+      in
+        moduleSpecFold
+          { baseByModuleName = baseByModuleName;
+            filesByModuleName = pkgSpec.packageExtraFiles;
+            dirsByModuleName = pkgSpec.packageExtraDirectories;
+            depsByModuleName = depsByModuleName;
+            extsByModuleName = extsByModuleName;
+            ghcOptsByModuleName = ghcOptsByModuleName;
+          };
+
+modSpecDFS = pkgSpec: memo: 
+      let
+        baseByModuleName = modName:
+          if memo ? ${modName}  == false 
+          then null 
+          else memo.${modName}.base;
+        depsByModuleName = modName:
+          if memo ? ${modName}  == false 
+          then  (abort "asking dependencies for external module: ${modName}")
+          else memo.${modName}.pkgSpec.packageDependencies modName;
+        extsByModuleName = modName:
+          if memo ? ${modName}  == false 
+          then (abort "asking extensions for external module: ${modName}")
+          else memo.${modName}.pkgSpec.packageExtensions;
+        ghcOptsByModuleName = modName:
+          if memo ? ${modName}  == false 
+          then (abort "asking ghc options for external module: ${modName}")
+          else memo.${modName}.pkgSpec.packageGhcOpts;
       in
         moduleSpecFold
           { baseByModuleName = baseByModuleName;

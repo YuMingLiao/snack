@@ -3,7 +3,9 @@
 }:
 
 with (callPackage ./modules.nix {});
-
+with (callPackage ./lib.nix {});
+with lib.attrsets;
+with lib;
 rec {
 
   mkPackageSpec =
@@ -81,4 +83,24 @@ rec {
     let
       res = pkgSpecAndBaseByModuleName topPkgSpec modName;
     in if res == null then def else res.pkgSpec;
-}
+
+  # Traverses all transitive packages and returns all the module specs in this topPkgSpec with base and pkg info.
+  # contains a module with given name.
+  baseAndPkgSpecPerModName = topPkgSpec: 
+    dfsDAG
+    { f = pkgSpec: _: 
+          mapAttrs' (name: base: nameValuePair name {base=base; pkgSpec=pkgSpec;})  (modNamesWithBaseFromPkgSpec pkgSpec);
+        elemLabel = pkgSpec: pkgSpec.packageName;
+        elemChildren = pkgSpec: pkgSpec.packagePackages;
+        reduce = a: b: a // b;
+        empty = {};
+    }
+    [topPkgSpec];
+
+
+
+  modNamesWithBaseFromPkgSpec = pkgSpec:
+    let reduce = a: b: a // b; in
+    foldl reduce {} (map modNamesWithBaseInDir pkgSpec.packageSourceDirs);
+  
+} 

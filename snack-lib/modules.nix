@@ -10,6 +10,7 @@
 
 with (callPackage ./files.nix {});
 with builtins;
+with lib.attrsets;
 rec {
   # Turns a module name to a file
   moduleToFile = mod:
@@ -47,6 +48,13 @@ rec {
     map fileToModule
       (lib.filter isHaskellModuleFile
       (listFilesInDir dir));
+
+  modNamesWithBaseInDir = dir:
+    mapAttrs' (n: base: nameValuePair (fileToModule n) base)
+      (lib.filterAttrs (n: _: isHaskellModuleFile n)
+      (filesWithBaseInDir dir));
+
+
 
   doesModuleExist = baseByModuleName: modName:
     doesFileExist (baseByModuleName modName) (moduleToFile modName);
