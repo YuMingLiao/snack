@@ -2,8 +2,11 @@
 { lib
 , stdenv
 , writeScript
+, callPackage
 }:
-
+with (callPackage ./lib.nix {});
+with lib.attrsets;
+with builtins;
 rec {
   # Takes a (string) filepath and creates a derivation for that file (and for
   # that file only)
@@ -50,6 +53,7 @@ rec {
   doesFileExist = base: filename:
     lib.lists.elem filename (listFilesInDir base);
 
+/*
   listFilesInDir = dir:
   let
     go = dir: dirName:
@@ -66,4 +70,15 @@ rec {
           (builtins.readDir dir)
       );
   in go dir "";
+*/
+  listFilesInDir = dir:
+    dfsDAG
+    { f = info@{dir, dirName}: _: mapAttrs (path: _: {"${dirName}${path}" = null;}) (filterAttrs (path: ty: ty != "directory") (readDir dir));
+        elemLabel = info@{dir, dirName}: dirName;
+        elemChildren = info@{dir, dirName}: mapAttrsToList (path: _: {dir="${dir}/${path}"; dirName="${dirName}${path}/";}) (filterAttrs (path: ty: ty =="directory") (readDir dir));
+        reduce = a: b: a // b;
+        empty = {};
+    }
+    [{ dir=dir; dirName="";}];
+
 }
