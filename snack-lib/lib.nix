@@ -47,7 +47,7 @@ foldDAGRec =
 
 # dfsDAG :: DFS -> [elem] -> { label -> elem' }
 dfsDAG = dfs@{f, empty, elemLabel, reduce, elemChildren, ...}: roots:
-  (dfsDAGRec dfs { traversed = []; path = []; elem' = empty; } roots).elem';
+  (dfsDAGRec dfs {traversed = []; path = []; elem' = empty; } roots).elem';
 
 
 # dfsDAGRec :: DFS -> { label -> elem' } -> [elem] -> { label -> elem' }
@@ -67,14 +67,15 @@ dfsDAGRec =
         then acc
         else
           let acc' =
-              { inherit traversed elem';
+              { inherit elem' traversed;
                 path = path ++ [label];
               };
               acc'' = dfsDAGRec dfs acc' children;
+              #acc''.elem': all transitive elems.
               acc''' = 
               { elem' = reduce acc''.elem' (f elem acc''.elem');
-                traversed = traversed ++ [label];
-                path = path;
+                inherit path;
+                traversed = acc''.traversed ++ [label];
               };
           in acc''';
   in lib.foldl insert acc0 roots;

@@ -64,9 +64,10 @@ rec {
   listAllModuleImportsJSON = baseByModuleName: filesByModuleName: dirsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:
     let
       base = baseByModuleName modName;
+      exts = extsByModuleName modName;
       modExts =
         lib.strings.escapeShellArgs
-          (map (x: "-X${x}") (extsByModuleName modName));
+          (map (x: "-X${x}") exts);
       ghc = haskellPackages.ghcWithPackages (ps: [ ps.ghc ]);
       ghcOpts = (ghcOptsByModuleName modName); 
       ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
@@ -91,7 +92,7 @@ rec {
           ls
           readlink -f cabal_macros.h
           find . -name cabal_macros.h
-          ${importParser} ${singleOutModulePath base modName} ${modExts} ${ghcOptsArgs} -optP-include -optP${./cabal_macros.h} > $out
+          ${importParser} ${singleOutModulePath base modName} ${modExts} ${ghcOptsArgs} ${if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""} > $out
         '';
       };
 }

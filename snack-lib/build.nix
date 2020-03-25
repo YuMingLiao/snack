@@ -90,7 +90,7 @@ rec {
       ghc = ghcWith deps;
       deps = allTransitiveDeps [modSpec];
       exts = modSpec.moduleExtensions;
-      ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts); #++ (if elem "CPP" exts then ["-optP-include -optPcabal_macros.h"] else []);
+      ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts); 
       ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
       objectName = modSpec.moduleName;
       #builtDeps = map (buildModule ghcWith) (allTransitiveImports [modSpec]);
@@ -160,11 +160,16 @@ rec {
                 -outputdir $out \
                 ${ghcOptsArgs} \
                 2>&1"
+          
+          readlink -f cabal_macros.h
+          find . -name cabal_macros.h
+          echo ${./.}cabal_macros.h
           ghc ${lib.strings.escapeShellArgs packageList} \
             ${lib.strings.escapeShellArgs objList} \
             -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c \
             -outputdir $out \
             ${ghcOptsArgs} \
+            ${if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""} \
             2>&1
 
           ls $out
