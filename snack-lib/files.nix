@@ -38,15 +38,10 @@ rec {
       builder = writeScript (name + "-single-out")
       # TODO: make sure the file actually exists and that there's only one
       ''
-        echo "Singling out file ${file}"
         source $stdenv/setup
         mkdir -p $out
-        echo "Running: cp $src/${file} $out/${file}"
-        echo "Listing $src"
-        ls $src/**/*
         mkdir -p $(dirname $out/${file})
         cp $src/${file} $out/${file}
-        echo "Done: Singling out file ${file}"
       '';
     };
 

@@ -32,7 +32,7 @@ foldDAGRec =
   let
     insert = acc@{traversed, elem'}: elem:
       let
-        label = trace (elemLabel elem) (elemLabel elem);
+        label = elemLabel elem;
         children = elemChildren elem;
       in
         if lib.attrsets.hasAttr label traversed
@@ -61,7 +61,7 @@ dfsDAGRec =
         label = elemLabel elem;
         children = elemChildren elem;
       in
-        if lib.lists.elem label (trace "${toString (path++[label])}" path)
+        if lib.lists.elem label path
         then abort "cycle: ${toString (path++[label])}"
         else if lib.lists.elem label traversed 
         then acc

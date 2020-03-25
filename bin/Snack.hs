@@ -525,11 +525,6 @@ run p args = T.lines <$> S.run p args
 -- | Run the executable with given arguments, assuming a single line of output
 runStdin1 :: T.Text -> S.FilePath -> [T.Text] -> Sh T.Text
 runStdin1 stin p args = do
-    S.echo "begin"
-    S.inspect stin
-    S.inspect p
-    S.inspect args
-    S.echo "end"
     S.setStdin stin
     run p args >>= \case
       [out] -> pure out

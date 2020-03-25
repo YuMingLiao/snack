@@ -108,7 +108,7 @@ with rec
       dfs = modSpecDFS pkgSpec memo;
       modSpecs' = dfsDAG dfs modNames;
       modSpecs = builtins.attrValues modSpecs';
-    in trace "modSpecs" modSpecs;
+    in modSpecs;
 
   executableMainModSpec = pkgSpec:
     let

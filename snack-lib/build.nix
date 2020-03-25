@@ -29,7 +29,7 @@ rec {
   # returns a attrset where the keys are the module names and the values are
   # the modules' object file path
   buildLibrary = ghcWith: modSpecs:
-    trace "buildLibrary" (buildModulesRec ghcWith {} modSpecs);
+    buildModulesRec ghcWith {} modSpecs;
 
   linkMainModule =
       { ghcWith
@@ -47,7 +47,6 @@ rec {
       drv = runCommand name {}
         ''
           mkdir -p $out/bin
-          echo "trace: ghc ${lib.strings.escapeShellArgs objList}"
 
           ${ghc}/bin/ghc \
             ${lib.strings.escapeShellArgs packageList} \
@@ -70,7 +69,6 @@ rec {
           let builtDeps = map (x: removeSuffix "${moduleToObject x.moduleName}" traversed.${x.moduleName} ) (allTransitiveImports [mod]);
               objList = map (x: traversed.${x.moduleName}) mod.moduleImports;
           in 
-          # trace "f ${mod.moduleName} ${toString (attrNames traversed)}"
           { "${mod.moduleName}" =
             # need to give it imported modules's obj info.
             "${buildModule ghcWith mod builtDeps objList}/${moduleToObject mod.moduleName}";
@@ -137,33 +135,14 @@ rec {
       phases =
         [ "unpackPhase" "buildPhase" ];
 
-      imports = map (mmm: mmm.moduleName) modSpec.moduleImports;
       buildPhase =
         ''
-          echo "Building module ${modSpec.moduleName}"
-          echo "Local imports are:"
-          for foo in $imports; do
-            echo " - $foo"
-          done
-
           mkdir -p $out
-          echo "Creating dependencies symtree for module ${modSpec.moduleName}"
           ${makeSymtree}
-          echo "Creating module symlink for module ${modSpec.moduleName}"
           ${makeSymModule}
-          echo "Compiling module ${modSpec.moduleName}"
           # Set a tmpdir we have control over, otherwise GHC fails, not sure why
           mkdir -p tmp
-          echo "trace: buildModule: ghc 
-                ${lib.strings.escapeShellArgs objList} \
-                -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c \
-                -outputdir $out \
-                ${ghcOptsArgs} \
-                2>&1"
-          
-          readlink -f cabal_macros.h
-          find . -name cabal_macros.h
-          echo ${./.}cabal_macros.h
+         
           ghc ${lib.strings.escapeShellArgs packageList} \
             ${lib.strings.escapeShellArgs objList} \
             -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c \
@@ -171,9 +150,6 @@ rec {
             ${ghcOptsArgs} \
             ${if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""} \
             2>&1
-
-          ls $out
-          echo "Done building module ${modSpec.moduleName}"
         '';
 
       buildInputs =

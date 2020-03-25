@@ -88,10 +88,6 @@ rec {
             [ "unpackPhase" "buildPhase" ];
           buildPhase = 
         ''
-          pwd
-          ls
-          readlink -f cabal_macros.h
-          find . -name cabal_macros.h
           ${importParser} ${singleOutModulePath base modName} ${modExts} ${ghcOptsArgs} ${if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""} > $out
         '';
       };
