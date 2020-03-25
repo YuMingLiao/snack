@@ -144,7 +144,6 @@ rec {
           mkdir -p tmp
          
           ghc ${lib.strings.escapeShellArgs packageList} \
-            ${lib.strings.escapeShellArgs objList} \
             -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c \
             -outputdir $out \
             ${ghcOptsArgs} \
@@ -152,6 +151,7 @@ rec {
             2>&1
         '';
 
+#            ${lib.strings.escapeShellArgs objList} \
       buildInputs =
         [ ghc
           rsync

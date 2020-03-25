@@ -86,6 +86,7 @@ rec {
           };
           phases =
             [ "unpackPhase" "buildPhase" ];
+          #It's just parsing imports. IMO, modExts and ghcOpts should be omitted to avoid recompiling when change.
           buildPhase = 
         ''
           ${importParser} ${singleOutModulePath base modName} ${modExts} ${ghcOptsArgs} ${if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""} > $out
