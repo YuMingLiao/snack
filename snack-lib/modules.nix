@@ -33,6 +33,7 @@ rec {
   singleOutModulePath = base: mod:
     "${singleOut base (moduleToFile mod)}/${moduleToFile mod}";
 
+  #TODO Maybe hie files helps. Maybe vim can produce an import change notification.
   # Generate a list of haskell module names needed by the haskell file
   listModuleImports = baseByModuleName: filesByModuleName: dirsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:
     builtins.fromJSON

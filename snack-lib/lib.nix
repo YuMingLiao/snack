@@ -71,7 +71,6 @@ dfsDAGRec =
                 path = path ++ [label];
               };
               acc'' = dfsDAGRec dfs acc' children;
-              #acc''.elem': all transitive elems.
               acc''' = 
               { elem' = reduce acc''.elem' (f elem acc''.elem');
                 inherit path;
