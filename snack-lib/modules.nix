@@ -4,13 +4,14 @@
 , runCommand
 , stdenv
 , glibcLocales
-, haskellPackages
+, haskellPackages 
 , symlinkJoin
 }:
 
 with (callPackage ./files.nix {});
 with builtins;
 with lib.attrsets;
+with lib.debug;
 rec {
   # Turns a module name to a file
   moduleToFile = mod:
@@ -74,7 +75,7 @@ rec {
       ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
       importParser = runCommand "import-parser"
         { buildInputs = [ ghc ];
-        } "ghc -Wall -Werror -package ghc ${./Imports.hs} -o $out" ;
+        } "ghc --version && ghc -Wall -Werror -package ghc ${./Imports.hs} -o $out" ;
     # XXX: this command needs ghc in the environment so that it can call "ghc
     # --print-libdir"...
     in stdenv.mkDerivation

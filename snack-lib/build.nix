@@ -97,11 +97,11 @@ rec {
       makeSymtree =
         if lib.lists.length builtDeps >= 1
         # TODO: symlink instead of copy
-        then "rsync -r ${lib.strings.escapeShellArgs builtDeps} ."
+        then "ln -s ${lib.strings.escapeShellArgs builtDeps} ."
         else "";
       makeSymModule =
         # TODO: symlink instead of copy
-        "rsync -r ${singleOutModule base modSpec.moduleName}/ .";
+        "ln -s ${singleOutModule base modSpec.moduleName}/* .";
       pred = file: path: type:
         let
           topLevel = (builtins.toString base) + "/";

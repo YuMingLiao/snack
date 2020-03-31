@@ -63,8 +63,13 @@ main = do
 
         -- XXX: We need to preprocess the file so that all extensions are
         -- loaded
+#if __GLASGOW_HASKELL__ >= 808
+        (dflags2, fp2) <- liftIO $
+          either (error "some error") id <$> DriverPipeline.preprocess hsc_env fp Nothing Nothing
+#else
         (dflags2, fp2) <- liftIO $
           DriverPipeline.preprocess hsc_env (fp, Nothing)
+#endif
         _ <- GHC.setSessionDynFlags dflags2
 
         -- Read the file that we want to parse
@@ -114,3 +119,5 @@ runParser filename str parser = do
     location = SrcLoc.mkRealSrcLoc (FastString.mkFastString filename) 1 1
     buffer = StringBuffer.stringToStringBuffer str
     parseState flags = Lexer.mkPState flags buffer location
+
+

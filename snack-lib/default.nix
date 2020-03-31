@@ -2,8 +2,8 @@
 # TODO: currently single out derivations prepend the PWD to the path
 # TODO: make sure that filters for "base" are airtight
 # TODO: document the sh*t out of these functions
-{ pkgs
-, ghc-version ? "ghc864"
+{ pkgs  
+, ghc-version ? "ghc865"
 , ghcWithPackages ? pkgs.haskell.packages.${ghc-version}.ghcWithPackages
 , haskellPackages ? pkgs.haskell.packages.${ghc-version}
 }:
@@ -52,8 +52,8 @@ with rec
         exe_path = "${drv.out}/${drv.relExePath}";
       };
 
-  ghcWith = deps: ghcWithPackages
-    (ps: map (p: ps.${p}) deps);
+  ghcWith = deps: (ghcWithPackages
+    (ps: map (p: ps.${p}) deps));
 
   # Normal build (libs, exes)
 
