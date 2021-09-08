@@ -2,8 +2,8 @@
 , lib
 , callPackage
 , stdenv
-, rsync
 , symlinkJoin
+, xorg
 }:
 
 with (callPackage ./modules.nix {});
@@ -12,6 +12,8 @@ with (callPackage ./module-spec.nix {});
 with lib.attrsets;
 with lib.strings;
 with builtins;
+let lndir = xorg.lndir;
+in
 rec {
 
   # Returns an attribute set where the keys are all the built module names and
@@ -44,13 +46,25 @@ rec {
       ghcOptsArgs = lib.strings.escapeShellArgs moduleSpec.moduleGhcOpts;
       packageList = map (p: "-package ${p}") deps;
       relExePath = "bin/${name}";
-      drv = runCommand name {}
+      cbits = lib.lists.findFirst (x: baseNameOf x == "cbits") null moduleSpec.moduleDirectories;
+      copyCBitsFiles =
+        if cbits != null 
+        then "cp ${cbits}/* ."
+        else "";
+      linkCBitsCode =
+        if cbits != null 
+        then "*.c"
+        else "";
+ 
+      drv = runCommand name { buildInputs = []; }
         ''
+          echo "Start linking Main Module...${moduleSpec.moduleName} to ${name}"
           mkdir -p $out/bin
-
+          ${copyCBitsFiles}
           ${ghc}/bin/ghc \
             ${lib.strings.escapeShellArgs packageList} \
             ${lib.strings.escapeShellArgs objList} \
+            ${linkCBitsCode} \
             ${ghcOptsArgs} \
             -o $out/${relExePath}
         '';
@@ -96,12 +110,15 @@ rec {
       base = modSpec.moduleBase;
       makeSymtree =
         if lib.lists.length builtDeps >= 1
-        # TODO: symlink instead of copy
-        then "ln -s ${lib.strings.escapeShellArgs builtDeps} ."
+        then "for fromdir in ${lib.strings.escapeShellArgs builtDeps}; do lndir $fromdir .; done"
         else "";
+      makeHiToOut = 
+        if lib.lists.length builtDeps >= 1
+        then "for fromdir in ${lib.strings.escapeShellArgs builtDeps}; do lndir $fromdir $out; done"
+        else "";
+ 
       makeSymModule =
-        # TODO: symlink instead of copy
-        "ln -s ${singleOutModule base modSpec.moduleName}/* .";
+        "lndir ${singleOutModule base modSpec.moduleName} .";
       pred = file: path: type:
         let
           topLevel = (builtins.toString base) + "/";
@@ -137,24 +154,38 @@ rec {
 
       buildPhase =
         ''
+          echo "Here is:"
+          pwd
+          echo "Creating dir: $out"
           mkdir -p $out
+          echo "builtDeps: ${lib.strings.concatStringsSep "\n" builtDeps}"
+          echo "objList: ${lib.strings.concatStringsSep "\n"  objList}"
+
+          echo "Creating dependencies symtree for module ${modSpec.moduleName}"
           ${makeSymtree}
+          ${makeHiToOut}
+          echo "Creating module symlink for module ${modSpec.moduleName}"
           ${makeSymModule}
+          # ls -R ProjectM36 || :
+          ls .
+          echo "Compiling module ${modSpec.moduleName}: ${moduleToFile modSpec.moduleName}"
           # Set a tmpdir we have control over, otherwise GHC fails, not sure why
           mkdir -p tmp
          
           ghc ${lib.strings.escapeShellArgs packageList} \
-            -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c \
+            -tmpdir tmp/ ${moduleToFile modSpec.moduleName} -c\
             -outputdir $out \
             ${ghcOptsArgs} \
             ${if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""} \
             2>&1
+          ls -R $out
+          echo "Done building module ${modSpec.moduleName}"
         '';
 
 #            ${lib.strings.escapeShellArgs objList} \
       buildInputs =
         [ ghc
-          rsync
+          lndir
         ];
     };
 }

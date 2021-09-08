@@ -1,5 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE MonadFailDesugaring #-}
+-- deprecated {-# LANGUAGE MonadFailDesugaring #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}

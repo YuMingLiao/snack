@@ -16,11 +16,25 @@ import qualified DriverPipeline
 import qualified DynFlags
 import qualified FastString
 import qualified GHC
-import qualified ErrUtils
 import qualified Bag
+#if __GLASGOW_HASKELL__ <= 808
+import qualified ErrUtils
+#endif
+
 import qualified GHC.IO.Handle.Text as Handle
+
+#if __GLASGOW_HASKELL__ >= 810
+import qualified GHC.Hs.ImpExp as HsImpExp
+#else
 import qualified HsImpExp
+#endif
+
+#if __GLASGOW_HASKELL__ >= 810
+import qualified GHC.Hs as HsSyn
+#else
 import qualified HsSyn
+#endif
+
 import qualified HscTypes
 import qualified Lexer
 import qualified Module
@@ -65,7 +79,7 @@ main = do
         -- loaded
 #if __GLASGOW_HASKELL__ >= 808
         (dflags2, fp2) <- liftIO $
-          either (error "some error") id <$> DriverPipeline.preprocess hsc_env fp Nothing Nothing
+          either (\x -> error (show (Bag.bagToList x))) id <$> DriverPipeline.preprocess hsc_env fp Nothing Nothing
 #else
         (dflags2, fp2) <- liftIO $
           DriverPipeline.preprocess hsc_env (fp, Nothing)
@@ -77,7 +91,11 @@ main = do
 
         runParser fp2 str Parser.parseModule >>= \case
           Lexer.POk _ (SrcLoc.L _ res) -> pure res
-#if __GLASGOW_HASKELL__ >= 804
+#if __GLASGOW_HASKELL__ >= 810
+          Lexer.PFailed pState  -> liftIO $ do
+            let spn = Lexer.last_loc pState -- ?
+            let e   = undefined
+#elif __GLASGOW_HASKELL__ >= 804 
           Lexer.PFailed _ spn e -> liftIO $ do
 #else
           Lexer.PFailed spn e -> liftIO $ do
@@ -91,8 +109,11 @@ main = do
               , show spn
               ]
             throwIO $ HscTypes.mkSrcErr $
+#if __GLASGOW_HASKELL__ >= 810
+              Lexer.getErrorMessages pState dflags2 
+#else
               Bag.unitBag $ ErrUtils.mkPlainErrMsg dflags2 spn e
-
+#endif
     -- Extract the imports from the parsed module
     let imports' =
           map (\(SrcLoc.L _ idecl) ->
