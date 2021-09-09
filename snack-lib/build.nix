@@ -44,6 +44,7 @@ rec {
       deps = allTransitiveDeps [moduleSpec];
       ghc = ghcWith deps;
       ghcOptsArgs = lib.strings.escapeShellArgs moduleSpec.moduleGhcOpts;
+      exts = moduleSpec.moduleExtensions;
       packageList = map (p: "-package ${p}") deps;
       relExePath = "bin/${name}";
       cbits = lib.lists.findFirst (x: baseNameOf x == "cbits") null moduleSpec.moduleDirectories;
@@ -56,6 +57,7 @@ rec {
         then "*.c"
         else "";
  
+            # ${if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""} \
       drv = runCommand name { buildInputs = []; }
         ''
           echo "Start linking Main Module...${moduleSpec.moduleName} to ${name}"
@@ -110,15 +112,15 @@ rec {
       base = modSpec.moduleBase;
       makeSymtree =
         if lib.lists.length builtDeps >= 1
-        then "for fromdir in ${lib.strings.escapeShellArgs builtDeps}; do lndir $fromdir .; done"
+        then "for fromdir in ${lib.strings.escapeShellArgs builtDeps}; do lndir $fromdir . > /dev/null; done"
         else "";
       makeHiToOut = 
         if lib.lists.length builtDeps >= 1
-        then "for fromdir in ${lib.strings.escapeShellArgs builtDeps}; do lndir $fromdir $out; done"
+        then "for fromdir in ${lib.strings.escapeShellArgs builtDeps}; do lndir $fromdir $out > /dev/null; done"
         else "";
  
       makeSymModule =
-        "lndir ${singleOutModule base modSpec.moduleName} .";
+        "lndir ${singleOutModule base modSpec.moduleName} . > /dev/null";
       pred = file: path: type:
         let
           topLevel = (builtins.toString base) + "/";
@@ -152,24 +154,22 @@ rec {
       phases =
         [ "unpackPhase" "buildPhase" ];
 
+            # echo "builtDeps: ${lib.strings.concatStringsSep "\n" builtDeps}"
+            # echo "objList: ${lib.strings.concatStringsSep "\n"  objList}"
       buildPhase =
         ''
-          echo "Here is:"
-          pwd
           echo "Creating dir: $out"
           mkdir -p $out
-          echo "builtDeps: ${lib.strings.concatStringsSep "\n" builtDeps}"
-          echo "objList: ${lib.strings.concatStringsSep "\n"  objList}"
 
           echo "Creating dependencies symtree for module ${modSpec.moduleName}"
           ${makeSymtree}
+          echo "makeHiToOut"
           ${makeHiToOut}
           echo "Creating module symlink for module ${modSpec.moduleName}"
           ${makeSymModule}
-          # ls -R ProjectM36 || :
-          ls .
+
           echo "Compiling module ${modSpec.moduleName}: ${moduleToFile modSpec.moduleName}"
-          # Set a tmpdir we have control over, otherwise GHC fails, not sure why
+          
           mkdir -p tmp
          
           ghc ${lib.strings.escapeShellArgs packageList} \
@@ -178,10 +178,10 @@ rec {
             ${ghcOptsArgs} \
             ${if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""} \
             2>&1
-          ls -R $out
           echo "Done building module ${modSpec.moduleName}"
         '';
 
+          # ls -R $out
 #            ${lib.strings.escapeShellArgs objList} \
       buildInputs =
         [ ghc
