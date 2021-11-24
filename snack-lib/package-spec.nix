@@ -1,40 +1,24 @@
-{ lib
-, callPackage
-}:
+{ lib, callPackage }:
 
-with (callPackage ./modules.nix {});
-with (callPackage ./lib.nix {});
+with (callPackage ./modules.nix { });
+with (callPackage ./lib.nix { });
 with lib.attrsets;
-with lib;
-rec {
+with lib; rec {
 
-  mkPackageSpec =
-  packageDescr@
-    { src ? []
-    , name ? null
-    , main ? null
-    , ghcOpts ? []
-    , dependencies ? []
-    , extensions ? []
-    , extra-files ? []
-    , extra-directories ? []
-    , packages ? []
-    }:
-    with
-    rec {
-      isExe = ! builtins.isNull main;
-      pName =
-        if isExe && builtins.isNull name
-        then lib.strings.toLower main
-        else name;
-    };
-    { packageIsExe = ! builtins.isNull main;
+  mkPackageSpec = packageDescr@{ src ? [ ], name ? null, main ? null
+    , ghcOpts ? [ ], dependencies ? [ ], extensions ? [ ], extra-files ? [ ]
+    , extra-directories ? [ ], packages ? [ ] }:
+    with rec {
+      isExe = !builtins.isNull main;
+      pName = if isExe && builtins.isNull name then
+        lib.strings.toLower main
+      else
+        name;
+    }; {
+      packageIsExe = !builtins.isNull main;
       packageName = pName;
       packageMain = main;
-      packageSourceDirs =
-        if builtins.isList src
-        then src
-        else [src];
+      packageSourceDirs = if builtins.isList src then src else [ src ];
       packageGhcOpts = ghcOpts;
       packageExtensions = extensions;
       packageDependencies = mkPerModuleAttr dependencies;
@@ -47,17 +31,18 @@ rec {
     };
 
   mkPerModuleAttr = attr:
-    if builtins.isList attr
-    then (_: attr)
-    else if builtins.isAttrs attr
-    then (x: if builtins.hasAttr x attr then attr.${x} else [])
-    else if builtins.isFunction attr
-    then attr
+    if builtins.isList attr then
+      (_: attr)
+    else if builtins.isAttrs attr then
+      (x: if builtins.hasAttr x attr then attr.${x} else [ ])
+    else if builtins.isFunction attr then
+      attr
     else
       abort "Unknown type for per module attributes: ${builtins.typeOf attr}";
 
   flattenPackages = topPkgSpec:
-    [topPkgSpec] ++ lib.lists.concatMap (flattenPackages) topPkgSpec.packagePackages;
+    [ topPkgSpec ]
+    ++ lib.lists.concatMap (flattenPackages) topPkgSpec.packagePackages;
 
   # Traverses all transitive packages and returns the first package spec that
   # contains a module with given name. If none is found, returns the supplied
@@ -65,42 +50,42 @@ rec {
   pkgSpecAndBaseByModuleName = topPkgSpec: modName:
     let
       foo = pkgSpec:
-        lib.findFirst
-          (base: lib.lists.elem modName (listModulesInDir base))
-          null
-          pkgSpec.packageSourceDirs;
-      bar = lib.concatMap
-        (pkgSpec:
-          let base = foo pkgSpec;
-          in if base == null then [] else [ { inherit pkgSpec base; } ])
+        lib.findFirst (base: lib.lists.elem modName (listModulesInDir base))
+        null pkgSpec.packageSourceDirs;
+      bar = lib.concatMap (pkgSpec:
+        let base = foo pkgSpec;
+        in if base == null then [ ] else [{ inherit pkgSpec base; }])
         (flattenPackages topPkgSpec);
-    in if lib.length bar <= 0 then null else
-       if lib.length bar == 1 then lib.head bar
-       else abort
-        "Refusing to return base, module name was found more than once: ${modName}";
+    in if lib.length bar <= 0 then
+      null
+    else if lib.length bar == 1 then
+      lib.head bar
+    else
+      abort
+      "Refusing to return base, module name was found more than once: ${modName}";
 
   pkgSpecByModuleName = topPkgSpec: def: modName:
-    let
-      res = pkgSpecAndBaseByModuleName topPkgSpec modName;
+    let res = pkgSpecAndBaseByModuleName topPkgSpec modName;
     in if res == null then def else res.pkgSpec;
 
   # Traverses all transitive packages and returns all the module specs in this topPkgSpec with base and pkg info.
   # contains a module with given name.
-  baseAndPkgSpecPerModName = topPkgSpec: 
-    dfsDAG
-    { f = pkgSpec: _: 
-          mapAttrs' (name: base: nameValuePair name {base=base; pkgSpec=pkgSpec;})  (modNamesWithBaseFromPkgSpec pkgSpec);
-        elemLabel = pkgSpec: pkgSpec.packageName;
-        elemChildren = pkgSpec: pkgSpec.packagePackages;
-        reduce = a: b: a // b;
-        empty = {};
-    }
-    [topPkgSpec];
-
-
+  baseAndPkgSpecPerModName = topPkgSpec:
+    dfsDAG {
+      f = pkgSpec: _:
+        mapAttrs' (name: base:
+          nameValuePair name {
+            base = base;
+            pkgSpec = pkgSpec;
+          }) (modNamesWithBaseFromPkgSpec pkgSpec);
+      elemLabel = pkgSpec: pkgSpec.packageName;
+      elemChildren = pkgSpec: pkgSpec.packagePackages;
+      reduce = a: b: a // b;
+      empty = { };
+    } [ topPkgSpec ];
 
   modNamesWithBaseFromPkgSpec = pkgSpec:
-    let reduce = a: b: a // b; in
-    foldl reduce {} (map modNamesWithBaseInDir pkgSpec.packageSourceDirs);
-  
-} 
+    let reduce = a: b: a // b;
+    in foldl reduce { } (map modNamesWithBaseInDir pkgSpec.packageSourceDirs);
+
+}
