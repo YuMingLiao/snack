@@ -11,7 +11,6 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Main (main) where
-
 import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class

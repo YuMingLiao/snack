@@ -1,8 +1,10 @@
 # file related operations
-{ lib, stdenv, writeScript, callPackage }:
+{ lib, stdenv, writeScript, callPackage}:
 with (callPackage ./lib.nix { });
+with (callPackage ./attrset-lib.nix {});
 with lib.attrsets;
 with builtins; rec {
+
   # Takes a (string) filepath and creates a derivation for that file (and for
   # that file only)
   singleOut = base: file:
@@ -60,7 +62,9 @@ with builtins; rec {
          );
      in go dir "";
   */
-  listFilesInDir = dir:
+  #listFilesInDir and filesWithBaseInDir may be replaced by nix-freeze-files
+  listFilesInDir = dir: leaves (frozen dir);
+  listFilesInDir' = dir:
     dfsDAG {
       f = info@{ dir, dirName }:
         _:
@@ -78,8 +82,9 @@ with builtins; rec {
       dir = dir;
       dirName = "";
     }];
-
-  filesWithBaseInDir = base:
+  # it's a mapping from files to its base
+  filesWithBaseInDir = base: replace (flatten (frozen base)) base; 
+  filesWithBaseInDir' = base:
     dfsDAG {
       f = info@{ dir, dirName }:
         _:

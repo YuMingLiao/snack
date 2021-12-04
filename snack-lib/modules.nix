@@ -40,8 +40,8 @@ with lib.debug; rec {
       (builtins.match "[a-zA-Z].*[.]hs$" (builtins.baseNameOf f)));
 
   listModulesInDir = dir:
-    map fileToModule (lib.filter isHaskellModuleFile (listFilesInDir dir));
-
+    map fileToModule (lib.filter isHaskellModuleFile (attrNames (listFilesInDir dir)));
+  
   modNamesWithBaseInDir = dir:
     mapAttrs' (n: base: nameValuePair (fileToModule n) base)
     (lib.filterAttrs (n: _: isHaskellModuleFile n) (filesWithBaseInDir dir));
