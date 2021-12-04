@@ -2,7 +2,7 @@
 
 with (callPackage ./module-spec.nix {});
 with (callPackage ./modules.nix {});
-
+with builtins;
 rec {
 
   # Write a new ghci executable that loads all the modules defined in the
@@ -15,9 +15,12 @@ rec {
 
   ghciWithModules = ghcWith: modSpecs:
     let
+      exts = allTransitiveExtensions modSpecs;
       ghcOpts = allTransitiveGhcOpts modSpecs
-        ++ (map (x: "-X${x}") (allTransitiveExtensions modSpecs));
-      ghc = ghcWith (allTransitiveDeps modSpecs);
+      #  ++ (if elem "CPP" exts then ["-optP-include -optPcabal_macros.h"] else [])
+        ++ (map (x: "-X${x}") exts) ++ (map (x: "-package ${x}") deps);
+      deps = allTransitiveDeps modSpecs;
+      ghc = ghcWith deps;
       ghciArgs = ghcOpts ++ absoluteModuleFiles;
       absoluteModuleFiles =
         map
@@ -48,6 +51,7 @@ rec {
           done
           fi
         done
-        ${ghc}/bin/ghci ${lib.strings.escapeShellArgs ghciArgs}
+        echo ${lib.strings.escapeShellArgs ghcOpts}
+        ${ghc}/bin/ghci -optP-include -optPcabal_macros.h ${lib.strings.escapeShellArgs ghciArgs}
         '';
 }

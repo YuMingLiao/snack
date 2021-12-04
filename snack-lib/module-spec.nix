@@ -54,6 +54,7 @@ with builtins; rec {
   allTransitiveGhcOpts = allTransitiveLists "moduleGhcOpts";
   allTransitiveExtensions = allTransitiveLists "moduleExtensions";
   allTransitiveDirectories = allTransitiveLists "moduleDirectories";
+  allTransitiveFiles = allTransitiveLists "moduleFiles";
   allTransitiveImports = allTransitiveLists "moduleImports";
 
   allTransitiveLists = attr: modSpecs:

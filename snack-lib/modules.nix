@@ -72,7 +72,8 @@ with lib.debug; rec {
       LANG = "en_US.utf-8";
       src = symlinkJoin {
         name = "extra-files";
-        paths = [ (filesByModuleName modName) ] ++ (dirsByModuleName modName);
+        # TODO: needs another way to bring in (filesByModuleName modName)
+        paths = dirsByModuleName modName;
       };
       phases = [ "unpackPhase" "buildPhase" ];
       #It's just parsing imports. IMO, modExts and ghcOpts should be omitted to avoid recompiling when change.
