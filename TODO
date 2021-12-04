@@ -2,7 +2,8 @@ redefined cabal_macros.h happens. Why?
 look into ghc code? why where is a ghc_2.h?
 Or see if I can figure out relationships between module trees and redefined warnings?
 
-
+tmpdir or not is irrelavant.
+delete tmp dir or not is irrelavant.
 
 something is wrong in dfsDAG roots.
 if import another root, it fails.
@@ -10,3 +11,5 @@ maybe i should build a importDAG and get a toposort first.
 Now it seems works right.
 
 I use symLinkJoin to bring cabal_macros.h, is it related to the warning?
+
+It turns out I don't need cabal_macros.h now. ghc_??.h has it. What a surprise!
