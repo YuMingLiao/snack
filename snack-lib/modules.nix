@@ -26,6 +26,7 @@ with lib.debug; rec {
     "${singleOut base (moduleToFile mod)}/${moduleToFile mod}";
 
   #TODO Maybe hie files helps. Maybe vim can produce an import change notification.
+  #TODO ghc-pkg find-module may helps.
   # Generate a list of haskell module names needed by the haskell file
   listModuleImports =
     baseByModuleName: filesByModuleName: dirsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:

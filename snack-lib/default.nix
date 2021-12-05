@@ -9,7 +9,7 @@
 with pkgs;
 
 with (callPackage ./build.nix { });
-with (callPackage ./files.nix {}); 
+with (callPackage ./files.nix { });
 with (callPackage ./ghci.nix { });
 with (callPackage ./lib.nix { });
 with (callPackage ./modules.nix { });
@@ -174,5 +174,5 @@ with rec {
 
 }; {
   inherit inferBuild inferGhci buildAsExecutable buildAsLibrary executable
-    buildHoogle;
+    buildHoogle specsFromPackageFile;
 }

@@ -172,7 +172,9 @@ discoverPackageFile = do
 -- | How to call @nix-build@
 data NixConfig = NixConfig
   { nixNJobs :: NJobs
-  , nixDryRun :: Bool }
+  , nixDryRun :: Bool 
+  , nixShowTrace :: Bool 
+  }
 
 data NJobs = NJobs Int | NJobsAuto
 
@@ -196,6 +198,10 @@ parseNixConfig =
     <*> Opts.switch
         (Opts.long "dry-run"
         <> Opts.help "not doing anything")
+    <*> Opts.switch
+        (Opts.long "show-trace"
+        <> Opts.help "not doing anything")
+
 
 
 --- Snack configuration (unrelated to packages)
@@ -401,6 +407,7 @@ nixBuild snackCfg extraNixArgs nixExpr =
       -- how many jobs to run concurrently (-j)
       , "--max-jobs", T.pack (nJobsValue (nixNJobs nixCfg))
       , if nixDryRun nixCfg then "--dry-run" else ""
+      , if nixShowTrace nixCfg then "--show-trace" else ""
       ] <> (concatMap toCliArgs nixArgs) 
     funArgs :: [String]
     funArgs = toFunArg <$> nixArgs

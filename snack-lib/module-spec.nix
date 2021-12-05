@@ -36,7 +36,7 @@ with builtins; rec {
         "${modName}" = makeModuleSpec modName
           (map (mn: traversedModSpecs.${mn}) (modImportsNames modName))
           (filesByModuleName modName) (dirsByModuleName modName)
-          (baseByModuleName modName) (depsByModuleName modName)
+          (baseByModuleName modName) (depsByModuleName modName) #TODO shrink deps here by ghc-pkg find-module
           (extsByModuleName modName) (ghcOptsByModuleName modName);
       };
       empty = { };

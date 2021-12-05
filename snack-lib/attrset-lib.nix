@@ -33,8 +33,30 @@ with lib; rec {
         (map flatten (separatelyAddAttrPath (setAttrs s))));
   replace = s: v: mapAttrs (_: _: v) s;
   frozen = src:
-    import ("${runCommand ((baseNameOf src) + "-frozen") {
+    trace "${freeze src}" (import "${freeze src}/default.nix");
+  freeze = source: (import <nixpkgs> {}).stdenv.mkDerivation {
+      name = baseNameOf source + "-frozen";
+      src = source;
+      buildInputs = [nix-freeze-files];
+      phases = [ "buildPhase" ];
+      buildPhase = ''
+      mkdir -p $out; 
+      echo "nix-freeze-files -v ${source} -o $out"
+      ls ${source}
+      nix-freeze-files -v ${source} -o $out; 
+      cat $out/default.nix;
+'';
+};
+}
+/*
+  freeze = src: runCommand ((baseNameOf src) + "-frozen") {
       inherit src;
       buildInputs = [ nix-freeze-files ];
-    } "mkdir $out; nix-freeze-files -v $src -o $out;"}"+"/default.nix");
-}
+    } 
+''
+      mkdir $out; 
+      echo "nix-freeze-files -v ${src} -o $out -f"
+      nix-freeze-files -v ${src} -o $out -f; 
+      cat $out/default.nix;
+'';
+*/
