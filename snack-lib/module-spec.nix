@@ -26,17 +26,19 @@ with builtins; rec {
   moduleSpecFold = { baseByModuleName, filesByModuleName, dirsByModuleName
     , depsByModuleName, extsByModuleName, ghcOptsByModuleName }:
     let
+      importedModules = modName: listModuleImports baseByModuleName filesByModuleName dirsByModuleName extsByModuleName ghcOptsByModuleName modName;
       modImportsNames = modName:
         lib.lists.filter
-        (modName': !builtins.isNull (baseByModuleName modName'))
-        (listModuleImports baseByModuleName filesByModuleName dirsByModuleName
-          extsByModuleName ghcOptsByModuleName modName);
+        (modName': !builtins.isNull (baseByModuleName modName')) (importedModules modName);
+      modExternalImportsNames = modName: lib.lists.filter (modName': builtins.isNull (baseByModuleName modName')) (importedModules modName);
+      externalDepsByImports = modName: 
+        (lib.lists.remove "base" (lib.lists.remove "" (lib.lists.unique (map (findDep (depsByModuleName modName)) (modExternalImportsNames modName)))));
     in {
       f = modName: traversedModSpecs: {
         "${modName}" = makeModuleSpec modName
           (map (mn: traversedModSpecs.${mn}) (modImportsNames modName))
           (filesByModuleName modName) (dirsByModuleName modName)
-          (baseByModuleName modName) (depsByModuleName modName)
+          (baseByModuleName modName) (externalDepsByImports modName)  #TODO shrink deps here by ghc-pkg find-module
           (extsByModuleName modName) (ghcOptsByModuleName modName);
       };
       empty = { };

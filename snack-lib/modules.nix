@@ -26,6 +26,7 @@ with lib.debug; rec {
     "${singleOut base (moduleToFile mod)}/${moduleToFile mod}";
 
   #TODO Maybe hie files helps. Maybe vim can produce an import change notification.
+  #TODO ghc-pkg find-module may helps.
   # Generate a list of haskell module names needed by the haskell file
   listModuleImports =
     baseByModuleName: filesByModuleName: dirsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:
@@ -85,4 +86,18 @@ with lib.debug; rec {
         } > $out
       '';
     };
+
+    findDep = allDeps: modImport: let
+        ghc = haskellPackages.ghcWithPackages (ps: with ps; (map (p: ps.${p}) allDeps));
+      in
+      builtins.readFile (stdenv.mkDerivation {
+      name = "${modImport}-dpenedency";
+      buildInputs = [ghc];
+      phases = ["buildPhase"];
+      buildPhase = ''
+        ${ghc}/bin/ghc-pkg find-module ${modImport} | sed '1d' | awk '{$1=$1};1' | tr -d "()"> tmp
+        grep -q "no package" tmp && touch $out || sed 's/-[0-9].*//g' tmp | tr -d '\n' > $out 
+        echo "${modImport} is in $(cat $out)"
+      '';
+    });
 }

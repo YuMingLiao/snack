@@ -2,14 +2,14 @@
 # TODO: currently single out derivations prepend the PWD to the path
 # TODO: make sure that filters for "base" are airtight
 # TODO: document the sh*t out of these functions
-{ pkgs, ghc-version ? "ghc865"
+{ pkgs, ghc-version ? "ghc8107"
 , ghcWithPackages ? pkgs.haskell.packages.${ghc-version}.ghcWithPackages
 , haskellPackages ? pkgs.haskell.packages.${ghc-version} }:
 
 with pkgs;
 
 with (callPackage ./build.nix { });
-with (callPackage ./files.nix {}); 
+with (callPackage ./files.nix { });
 with (callPackage ./ghci.nix { });
 with (callPackage ./lib.nix { });
 with (callPackage ./modules.nix { });
@@ -174,5 +174,5 @@ with rec {
 
 }; {
   inherit inferBuild inferGhci buildAsExecutable buildAsLibrary executable
-    buildHoogle;
+    buildHoogle specsFromPackageFile;
 }

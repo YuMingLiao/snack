@@ -18,7 +18,6 @@ import Data.Aeson (FromJSON, (.:))
 import Data.FileEmbed (embedStringFile)
 import Data.List (intercalate)
 import Data.Maybe (mapMaybe)
-import Data.Semigroup ((<>))
 import Data.String.Interpolate
 import Shelly (Sh)
 import System.Directory (doesFileExist, doesPathExist, canonicalizePath)
@@ -172,7 +171,10 @@ discoverPackageFile = do
 -- | How to call @nix-build@
 data NixConfig = NixConfig
   { nixNJobs :: NJobs
-  , nixDryRun :: Bool }
+  , nixDryRun :: Bool 
+  , nixShowTrace :: Bool 
+  , nixTraceFunctionCalls :: Bool
+  }
 
 data NJobs = NJobs Int | NJobsAuto
 
@@ -196,6 +198,14 @@ parseNixConfig =
     <*> Opts.switch
         (Opts.long "dry-run"
         <> Opts.help "not doing anything")
+    <*> Opts.switch
+        (Opts.long "show-trace"
+        <> Opts.help "show-trace")
+    <*> Opts.switch
+        (Opts.long "trace-function-calls"
+        <> Opts.help "--trace-function-calls -vvvv")
+
+
 
 
 --- Snack configuration (unrelated to packages)
@@ -401,6 +411,8 @@ nixBuild snackCfg extraNixArgs nixExpr =
       -- how many jobs to run concurrently (-j)
       , "--max-jobs", T.pack (nJobsValue (nixNJobs nixCfg))
       , if nixDryRun nixCfg then "--dry-run" else ""
+      , if nixShowTrace nixCfg then "--show-trace" else ""
+      , if nixTraceFunctionCalls nixCfg then "--trace-function-calls" else ""
       ] <> (concatMap toCliArgs nixArgs) 
     funArgs :: [String]
     funArgs = toFunArg <$> nixArgs
