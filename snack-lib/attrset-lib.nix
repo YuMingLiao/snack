@@ -48,15 +48,4 @@ with lib; rec {
 '';
 };
 }
-/*
-  freeze = src: runCommand ((baseNameOf src) + "-frozen") {
-      inherit src;
-      buildInputs = [ nix-freeze-files ];
-    } 
-''
-      mkdir $out; 
-      echo "nix-freeze-files -v ${src} -o $out -f"
-      nix-freeze-files -v ${src} -o $out -f; 
-      cat $out/default.nix;
-'';
-*/
+
