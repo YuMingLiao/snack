@@ -139,7 +139,7 @@ in rec {
     in stdenv.mkDerivation {
       name = objectName;
       src = symlinkJoin {
-        name = "extra-files";
+        name = "${objectName}-extra-files";
         paths = [ extraFiles ] ++ modSpec.moduleDirectories;
       };
       phases = [ "unpackPhase" "buildPhase" ];

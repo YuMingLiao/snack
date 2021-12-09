@@ -18,7 +18,6 @@ import Data.Aeson (FromJSON, (.:))
 import Data.FileEmbed (embedStringFile)
 import Data.List (intercalate)
 import Data.Maybe (mapMaybe)
-import Data.Semigroup ((<>))
 import Data.String.Interpolate
 import Shelly (Sh)
 import System.Directory (doesFileExist, doesPathExist, canonicalizePath)

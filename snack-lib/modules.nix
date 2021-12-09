@@ -66,13 +66,14 @@ with lib.debug; rec {
         } -o $out";
       # XXX: this command needs ghc in the environment so that it can call "ghc
       # --print-libdir"...
+      files = filesByModuleName modName;
     in stdenv.mkDerivation {
       name = "${modName}-dependencies-json";
       buildInputs = [ ghc glibcLocales ];
       LANG = "en_US.utf-8";
       src = symlinkJoin {
-        name = "extra-files";
-        paths = [ (filesByModuleName modName) ] ++ (dirsByModuleName modName);
+        name = "${modName}-deps-json-extra-files";
+        paths = dirsByModuleName modName;
       };
       phases = [ "unpackPhase" "buildPhase" ];
       #It's just parsing imports. IMO, modExts and ghcOpts should be omitted to avoid recompiling when change.
@@ -80,7 +81,7 @@ with lib.debug; rec {
         ${importParser} ${
           singleOutModulePath base modName
         } ${modExts} ${ghcOptsArgs} ${
-          if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""
+          if elem "CPP" exts then "-optP-include -optPcabal_macros.h" else ""
         } > $out
       '';
     };
