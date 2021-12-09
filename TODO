@@ -13,3 +13,10 @@ Now it seems works right.
 I use symLinkJoin to bring cabal_macros.h, is it related to the warning?
 
 It turns out I don't need cabal_macros.h now. ghc_??.h has it. What a surprise!
+
+Well, while hoogle get packages names in stackage, I still need to manually add a package I want to try and ghcWith to make the module I am trying to compile. So auto-find-package-by-module cannot totally work.
+
+stderr: error: unrecognised flag '--experimental-features 'ca-derivations''
+Try '/run/current-system/sw/bin/nix-build --help' for more information.
+
+maybe add import-parser to nix-freeze-files will acclerate `snack build`
