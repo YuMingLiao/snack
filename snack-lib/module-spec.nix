@@ -32,13 +32,16 @@ with builtins; rec {
         (modName': !builtins.isNull (baseByModuleName modName')) (importedModules modName);
       modExternalImportsNames = modName: lib.lists.filter (modName': builtins.isNull (baseByModuleName modName')) (importedModules modName);
       externalDepsByImports = modName: 
-        (lib.lists.remove "base" (lib.lists.remove "" (lib.lists.unique (map (findDep (depsByModuleName modName)) (modExternalImportsNames modName)))));
+      (lib.lists.remove "base" 
+      (lib.lists.remove "" 
+      (lib.lists.unique 
+      (map (findDep (depsByModuleName modName)) (modExternalImportsNames modName)))));
     in {
       f = modName: traversedModSpecs: {
         "${modName}" = makeModuleSpec modName
           (map (mn: traversedModSpecs.${mn}) (modImportsNames modName))
           (filesByModuleName modName) (dirsByModuleName modName)
-          (baseByModuleName modName) (externalDepsByImports modName)  #TODO shrink deps here by ghc-pkg find-module
+          (baseByModuleName modName) (externalDepsByImports modName)  
           (extsByModuleName modName) (ghcOptsByModuleName modName);
       };
       empty = { };

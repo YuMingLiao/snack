@@ -67,14 +67,21 @@ with lib.debug; rec {
         } -o $out";
       # XXX: this command needs ghc in the environment so that it can call "ghc
       # --print-libdir"...
+      #what's the case for symlink?
+      onlyThisFile = p: validStorePath (onlyThisFile' p);
+      onlyThisFile' = f: lib.cleanSourceWith {
+	  filter = path: _: (/. + path) == f;
+	  src = dirOf f;
+	};
+    validStorePath = s: /. + "nix/store" + builtins.elemAt (builtins.split "/nix/store" s.outPath) 2;
+    dirsWithExtraFiles = map onlyThisFile (filesByModuleName modName);
     in stdenv.mkDerivation {
       name = "${modName}-dependencies-json";
       buildInputs = [ ghc glibcLocales ];
       LANG = "en_US.utf-8";
       src = symlinkJoin {
-        name = "extra-files";
-        # TODO: needs another way to bring in (filesByModuleName modName)
-        paths = dirsByModuleName modName;
+        name = "${modName}-deps-json-extra-files";
+        paths = dirsWithExtraFiles ++ (dirsByModuleName modName);
       };
       phases = [ "unpackPhase" "buildPhase" ];
       #It's just parsing imports. IMO, modExts and ghcOpts should be omitted to avoid recompiling when change.
@@ -82,7 +89,7 @@ with lib.debug; rec {
         ${importParser} ${
           singleOutModulePath base modName
         } ${modExts} ${ghcOptsArgs} ${
-          if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""
+          if elem "CPP" exts then "-optP-include -optPcabal_macros.h" else ""
         } > $out
       '';
     };
@@ -96,7 +103,7 @@ with lib.debug; rec {
       phases = ["buildPhase"];
       buildPhase = ''
         ${ghc}/bin/ghc-pkg find-module ${modImport} | sed '1d' | awk '{$1=$1};1' | tr -d "()"> tmp
-        grep -q "no package" tmp && touch $out || sed 's/-[0-9].*//g' tmp | tr -d '\n' > $out 
+        grep -q "no package" tmp && echo "error: couldn't find package for ${modImport}" && touch $out || sed 's/-[0-9].*//g' tmp | tr -d '\n' > $out 
         echo "${modImport} is in $(cat $out)"
       '';
     });
