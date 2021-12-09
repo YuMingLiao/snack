@@ -66,14 +66,21 @@ with lib.debug; rec {
         } -o $out";
       # XXX: this command needs ghc in the environment so that it can call "ghc
       # --print-libdir"...
-      files = filesByModuleName modName;
+      becomeAllDirs = dirs: map fileToDir dirs;
+      #what's the case for symlink?
+      fileToDir = p: if(lib.pathIsRegularFile p) then (validStorePath (mkDirFor p)) else p;
+      mkDirFor = f: cleanSourceWith {
+	  filter = path: _: path == f;
+	  src = dirOf f;
+	};
+    validStorePath = s: /. + "nix/store" + builtins.elemAt (builtins.split "/nix/store" s.outPath) 2;
     in stdenv.mkDerivation {
       name = "${modName}-dependencies-json";
       buildInputs = [ ghc glibcLocales ];
       LANG = "en_US.utf-8";
       src = symlinkJoin {
         name = "${modName}-deps-json-extra-files";
-        paths = dirsByModuleName modName;
+        paths = lib.debug.traceSeq (dirsByModuleName modName) (dirsByModuleName modName);
       };
       phases = [ "unpackPhase" "buildPhase" ];
       #It's just parsing imports. IMO, modExts and ghcOpts should be omitted to avoid recompiling when change.
