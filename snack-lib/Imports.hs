@@ -12,11 +12,7 @@ import Data.Semigroup
 #endif
 import System.Environment
 import Control.Exception
-import qualified DriverPipeline
-import qualified DynFlags
-import qualified FastString
 import qualified GHC
-import qualified Bag
 #if __GLASGOW_HASKELL__ <= 808
 import qualified ErrUtils
 #endif
@@ -35,6 +31,22 @@ import qualified GHC.Hs as HsSyn
 import qualified HsSyn
 #endif
 
+
+#if __GLASGOW_HASKELL__ >= 902
+import qualified GHC.Parser.Errors.Ppr
+import qualified GHC.Driver.Config 
+import qualified GHC.Parser.Lexer as Lexer
+import qualified GHC.Unit.Module.Name as Module
+import qualified GHC.Utils.Outputable as Outputable
+import qualified GHC.Parser as Parser 
+import qualified GHC.Driver.Pipeline as DriverPipeline
+import qualified GHC.Data.Bag as Bag 
+import qualified GHC.Data.StringBuffer as StringBuffer
+import qualified GHC.Data.FastString as FastString
+import qualified GHC.Driver.Session as DynFlags
+import qualified GHC.Types.SourceError as HscTypes
+import qualified GHC.Types.SrcLoc as SrcLoc
+#else
 import qualified HscTypes
 import qualified Lexer
 import qualified Module
@@ -42,6 +54,11 @@ import qualified Outputable
 import qualified Parser
 import qualified SrcLoc
 import qualified StringBuffer
+import qualified Bag
+import qualified FastString
+import qualified DriverPipeline
+import qualified DynFlags
+#endif
 import qualified System.Process as Process
 import System.IO (stderr)
 
@@ -109,7 +126,9 @@ main = do
               , show spn
               ]
             throwIO $ HscTypes.mkSrcErr $
-#if __GLASGOW_HASKELL__ >= 810
+#if __GLASGOW_HASKELL__ >= 902
+              GHC.Parser.Errors.Ppr.pprError <$> (Lexer.getErrorMessages pState) 
+#elif __GLASGOW_HASKELL__ >= 810
               Lexer.getErrorMessages pState dflags2 
 #else
               Bag.unitBag $ ErrUtils.mkPlainErrMsg dflags2 spn e
@@ -135,10 +154,14 @@ filterBOM = \case
 runParser :: FilePath -> String -> Lexer.P a -> GHC.Ghc (Lexer.ParseResult a)
 runParser filename str parser = do
     dynFlags <- DynFlags.getDynFlags
-    pure $ Lexer.unP parser (parseState dynFlags)
+    pure $ Lexer.unP parser (parseState (GHC.Driver.Config.initParserOpts dynFlags))
   where
     location = SrcLoc.mkRealSrcLoc (FastString.mkFastString filename) 1 1
     buffer = StringBuffer.stringToStringBuffer str
+#if __GLASGOW_HASKELL__ >= 902
+    -- TODO: not DynFlags anymore. It's ParserOpts now. What's the relationship?
+    parseState flags = Lexer.initParserState flags buffer location
+#else
     parseState flags = Lexer.mkPState flags buffer location
-
+#endif
 
