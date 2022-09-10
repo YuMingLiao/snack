@@ -76,6 +76,7 @@ with lib.debug; rec {
     validStorePath = s: /. + "nix/store" + builtins.elemAt (builtins.split "/nix/store" s.outPath) 2;
     dirsWithExtraFiles = map onlyThisFile (filesByModuleName modName);
     in stdenv.mkDerivation {
+      __contentAddressed = true;
       name = "${modName}-dependencies-json";
       buildInputs = [ ghc glibcLocales ];
       LANG = "en_US.utf-8";
