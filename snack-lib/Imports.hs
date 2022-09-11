@@ -33,11 +33,11 @@ import qualified HsSyn
 
 
 #if __GLASGOW_HASKELL__ >= 902
+import GHC.Data.Bag (bagToList)
 import qualified GHC.Parser.Errors.Ppr
 import qualified GHC.Driver.Config 
 import qualified GHC.Parser.Lexer as Lexer
 import qualified GHC.Unit.Module.Name as Module
-import qualified GHC.Utils.Outputable as Outputable
 import qualified GHC.Parser as Parser 
 import qualified GHC.Driver.Pipeline as DriverPipeline
 import qualified GHC.Data.Bag as Bag 
@@ -110,8 +110,8 @@ main = do
           Lexer.POk _ (SrcLoc.L _ res) -> pure res
 #if __GLASGOW_HASKELL__ >= 810
           Lexer.PFailed pState  -> liftIO $ do
-            let spn = Lexer.last_loc pState -- ?
-            let e   = undefined
+            let spn = Lexer.last_loc pState 
+            let e   = Lexer.errors pState 
 #elif __GLASGOW_HASKELL__ >= 804 
           Lexer.PFailed _ spn e -> liftIO $ do
 #else
@@ -121,9 +121,13 @@ main = do
               [ "Could not parse module: "
               , fp2
               , " (originally " <> fp <> ")"
+#if __GLASGOW_HASKELL__ >= 810
+              , " because "  <> (show . bagToList $ fmap GHC.Parser.Errors.Ppr.pprError e)
+              , " src span " <>show spn
+#else
               , " because " <> Outputable.showSDocUnsafe e
-              , " src span "
-              , show spn
+              , " src span ", show spn
+#endif
               ]
             throwIO $ HscTypes.mkSrcErr $
 #if __GLASGOW_HASKELL__ >= 902
