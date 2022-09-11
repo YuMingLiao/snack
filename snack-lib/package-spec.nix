@@ -19,7 +19,7 @@ with lib; rec {
       packageName = pName;
       packageMain = main;
       packageSourceDirs = if builtins.isList src then src else [ src ];
-      packageGhcOpts = ghcOpts;
+      packageGhcOpts = mkPerModuleAttr ghcOpts;
       packageExtensions = extensions;
       packageDependencies = mkPerModuleAttr dependencies;
 

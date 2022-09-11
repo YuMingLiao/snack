@@ -29,10 +29,10 @@ with lib.debug; rec {
   #TODO ghc-pkg find-module may helps.
   # Generate a list of haskell module names needed by the haskell file
   listModuleImports =
-    baseByModuleName: filesByModuleName: dirsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:
+    baseByModuleName: filesByModuleName: dirsByModuleName: depsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:
     builtins.fromJSON (builtins.readFile
       (listAllModuleImportsJSON baseByModuleName filesByModuleName
-        dirsByModuleName extsByModuleName ghcOptsByModuleName modName));
+        dirsByModuleName depsByModuleName extsByModuleName ghcOptsByModuleName modName));
 
   # Whether the file is a Haskell module or not. It uses very simple
   # heuristics: If the file starts with a capital letter, then yes.
@@ -53,21 +53,17 @@ with lib.debug; rec {
   # Lists all module dependencies, not limited to modules existing in this
   # project
   listAllModuleImportsJSON =
-    baseByModuleName: filesByModuleName: dirsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:
+    baseByModuleName: filesByModuleName: dirsByModuleName: depsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:
     let
       base = baseByModuleName modName;
-      exts = extsByModuleName modName;
-      modExts = lib.strings.escapeShellArgs (map (x: "-X${x}") exts);
-      ghc = haskellPackages.ghcWithPackages (ps: [ ps.ghc ]);
-      ghcOpts = (ghcOptsByModuleName modName);
-      ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
+      modExts = lib.strings.escapeShellArgs (map (x: "-X${x}") (extsByModuleName modName));
+      deps = (depsByModuleName modName);
+      ghc = haskellPackages.ghcWithPackages (ps: [ ps.ghc ] ++ map (x: ps.${x}) deps); 
+      ghcOptsArgs = lib.strings.escapeShellArgs (ghcOptsByModuleName modName);
       importParser = runCommand "import-parser" { buildInputs = [ ghc ]; }
-        "ghc --version && ghc -Wall -Werror -package ghc ${
-          ./Imports.hs
-        } -o $out";
+        "ghc --version && ghc -Wall -Werror -package ghc ${./Imports.hs} -o $out";
       # XXX: this command needs ghc in the environment so that it can call "ghc
       # --print-libdir"...
-      #what's the case for symlink?
       onlyThisFile = p: validStorePath (onlyThisFile' p);
       onlyThisFile' = f: lib.cleanSourceWith {
 	  filter = path: _: (/. + path) == f;
@@ -83,15 +79,14 @@ with lib.debug; rec {
       src = symlinkJoin {
         name = "${modName}-deps-json-extra-files";
         paths = dirsWithExtraFiles ++ (dirsByModuleName modName);
+        __contentAddressed = true;
       };
       phases = [ "unpackPhase" "buildPhase" ];
       #It's just parsing imports. IMO, modExts and ghcOpts should be omitted to avoid recompiling when change.
       buildPhase = ''
         ${importParser} ${
           singleOutModulePath base modName
-        } ${modExts} ${ghcOptsArgs} ${
-          if elem "CPP" exts then "-optP-include -optPcabal_macros.h" else ""
-        } > $out
+        } ${modExts} -fversion-macros > $out
       '';
     };
 

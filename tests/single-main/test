@@ -4,7 +4,7 @@
 set -euo pipefail
 
 test() {
-  echo | $SNACK ghci
+  echo | $SNACK ghci  
   $SNACK run
 }
 

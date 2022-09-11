@@ -17,7 +17,6 @@ rec {
     let
       exts = allTransitiveExtensions modSpecs;
       ghcOpts = allTransitiveGhcOpts modSpecs
-      #  ++ (if elem "CPP" exts then ["-optP-include -optPcabal_macros.h"] else [])
         ++ (map (x: "-X${x}") exts) ++ (map (x: "-package ${x}") deps);
       deps = allTransitiveDeps modSpecs;
       ghc = ghcWith deps;
@@ -52,6 +51,6 @@ rec {
           fi
         done
         echo ${lib.strings.escapeShellArgs ghcOpts}
-        ${ghc}/bin/ghci -optP-include -optPcabal_macros.h ${lib.strings.escapeShellArgs ghciArgs}
+        ${ghc}/bin/ghci ${lib.strings.escapeShellArgs ghciArgs}
         '';
 }

@@ -1,4 +1,0 @@
-name: single-main
-
-executable:
-    main: Main.hs

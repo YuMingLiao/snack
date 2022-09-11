@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-nix-env -f ./default.nix -iA snack-exe
+nix-env -f ./default.nix -iA snack-exe 

@@ -15,8 +15,7 @@ in rec {
   buildMain = ghcWith: mainModSpec:
     let
       traversed = buildModulesRec ghcWith { } mainModSpec.moduleImports;
-      builtDeps = attrValues
-        (mapAttrs (n: v: removeSuffix "${moduleToObject n}" v) traversed);
+      builtDeps = attrValues (mapAttrs (n: v: removeSuffix "${moduleToObject n}" v) traversed);
       objList = map (x: traversed.${x.moduleName}) mainModSpec.moduleImports;
       # XXX: the main modules need special handling regarding the object name
     in traversed // {
@@ -45,7 +44,6 @@ in rec {
       copyCBitsFiles = if cbits != null then "cp ${cbits}/* ." else "";
       linkCBitsCode = if cbits != null then "*.c" else "";
 
-      # ${if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""} \
       drv = runCommand name { buildInputs = [ ]; } ''
         echo "Start linking Main Module...${moduleSpec.moduleName} to ${name}"
         mkdir -p $out/bin
@@ -91,7 +89,7 @@ in rec {
       #      objAttrs = lib.foldl (a: b: a // b) {} (map (mod: {"${mod.moduleName}" = "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";}) modSpec.moduleImports);
       #      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
       packageList = map (p: "-package ${p}") deps;
-      ghc = ghcWith deps;
+      ghc = ghcWith (trace "${modSpec.moduleName}'s deps:  ${toString deps}" deps);
       deps = allTransitiveDeps [ modSpec ];
       exts = modSpec.moduleExtensions;
       ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts);
@@ -131,11 +129,6 @@ in rec {
           (expected == actual)
           || (t == "directory" && (lib.strings.hasPrefix actual expected)))
         modSpec.moduleFiles) >= 1) base;
-      addCabalMacrosHeader =
-        if elem "CPP" exts && lib.lists.length builtDeps == 0 then
-          "-optP-include -optP./cabal_macros.h"
-        else
-          "";
     in stdenv.mkDerivation {
       name = objectName;
       src = symlinkJoin {
@@ -170,8 +163,6 @@ in rec {
         # echo "Done building module ${modSpec.moduleName}"
       '';
 
-      #            ${addCabalMacrosHeader} \
-      # ${if elem "CPP" exts then "-optP-include -optP./cabal_macros.h" else ""} \
       # ls -R $out
       #            ${lib.strings.escapeShellArgs objList} \
       buildInputs = [ ghc lndir ];

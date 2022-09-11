@@ -26,7 +26,7 @@ with builtins; rec {
   moduleSpecFold = { baseByModuleName, filesByModuleName, dirsByModuleName
     , depsByModuleName, extsByModuleName, ghcOptsByModuleName }:
     let
-      importedModules = modName: listModuleImports baseByModuleName filesByModuleName dirsByModuleName extsByModuleName ghcOptsByModuleName modName;
+      importedModules = modName: listModuleImports baseByModuleName filesByModuleName dirsByModuleName depsByModuleName extsByModuleName ghcOptsByModuleName modName;
       modImportsNames = modName:
         lib.lists.filter
         (modName': !builtins.isNull (baseByModuleName modName')) (importedModules modName);
@@ -35,7 +35,7 @@ with builtins; rec {
       (lib.lists.remove "base" 
       (lib.lists.remove "" 
       (lib.lists.unique 
-      (map (findDep (depsByModuleName modName)) (modExternalImportsNames modName)))));
+      (map (findDep (depsByModuleName modName)) (modExternalImportsNames modName))))) ++ depsByModuleName modName; #still needs customized deps
     in {
       f = modName: traversedModSpecs: {
         "${modName}" = makeModuleSpec modName
@@ -89,7 +89,7 @@ with builtins; rec {
       ghcOptsByModuleName = modName:
         (pkgSpecByModuleName pkgSpec
           (abort "asking ghc options for external module: ${modName}")
-          modName).packageGhcOpts;
+          modName).packageGhcOpts modeName;
     in moduleSpecFold {
       baseByModuleName = baseByModuleName;
       filesByModuleName = pkgSpec.packageExtraFiles;
@@ -117,7 +117,7 @@ with builtins; rec {
         if memo ? ${modName} == false then
           (abort "asking ghc options for external module: ${modName}")
         else
-          memo.${modName}.pkgSpec.packageGhcOpts;
+          memo.${modName}.pkgSpec.packageGhcOpts modName;
     in moduleSpecFold {
       baseByModuleName = baseByModuleName;
       filesByModuleName = pkgSpec.packageExtraFiles;

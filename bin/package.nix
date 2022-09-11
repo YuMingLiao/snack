@@ -1,14 +1,14 @@
 let
-  #pkgs = import ../nix {};
-  overlay = _: pkgs:
-      { 
-        packages = pkgs.callPackages ../nix/packages.nix {};
-      };
-  pkgs = import <nixpkgs> { overlays = [overlay]; };
+  pkgs = import ../nix {};
+#  overlay = _: pkgs:
+#      { 
+#        packages = pkgs.callPackages ../nix/packages.nix {};
+#      };
+#  pkgs = import <nixpkgs> { overlays = [overlay]; };
   specJson = pkgs.writeTextFile
     { name = "spec-json";
-      #text = builtins.toJSON { inherit (pkgs.sources.nixpkgs) sha256 url; } ;
-      text = builtins.toJSON {} ;
+      text = builtins.toJSON { inherit (pkgs.sources.nixpkgs) sha256 url; } ;
+      #text = builtins.toJSON {} ;
       destination = "/spec.json";
     };
   lib64 = pkgs.runCommand "lib64" {}

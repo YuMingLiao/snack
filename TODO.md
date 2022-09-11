@@ -1,12 +1,12 @@
 TODO
-- [] should I pull request or enjoy myself?
-- [] check if it still works.
+- [x] check if it still works.
 - [] let nix compile project-m36 by snack. Agile development of big haskell dependency.
-- [] understand what to do when you in the middle of development while your upstream updated.
+- [x] understand what to do when you in the middle of development while your upstream updated.
+- [] a nix build that auto detect packages needed in a hs file is probably a good start.
+- [] import parser doesn't use ghc with all packages, so -fversion-macros failed.
 
 #developer's thought log
 
-vredefined cabal_macros.h happens. Why?
 look into ghc code? why where is a ghc_2.h?
 Or see if I can figure out relationships between module trees and redefined warnings?
 
