@@ -56,8 +56,9 @@ with lib.debug; rec {
     baseByModuleName: filesByModuleName: dirsByModuleName: depsByModuleName: extsByModuleName: ghcOptsByModuleName: modName:
     let
       base = baseByModuleName modName;
-      modExts = lib.strings.escapeShellArgs (map (x: "-X${x}") (extsByModuleName modName));
+      modExtsArgs = lib.strings.escapeShellArgs (map (x: "-X${x}") (extsByModuleName modName));
       deps = (depsByModuleName modName);
+      depsArgs = lib.strings.escapeShellArgs (["-package "] ++ deps); 
       ghc = haskellPackages.ghcWithPackages (ps: [ ps.ghc ] ++ map (x: ps.${x}) deps); 
       ghcOptsArgs = lib.strings.escapeShellArgs (ghcOptsByModuleName modName);
       importParser = runCommand "import-parser" { buildInputs = [ ghc ]; }
@@ -83,10 +84,12 @@ with lib.debug; rec {
       };
       phases = [ "unpackPhase" "buildPhase" ];
       #It's just parsing imports. IMO, modExts and ghcOpts should be omitted to avoid recompiling when change.
+      # TODO: but to parse macros, gonna need deps, -XCPP, and -fversion-macros if CPP is on.
+
       buildPhase = ''
         ${importParser} ${
           singleOutModulePath base modName
-        } ${modExts} -fversion-macros > $out
+        } ${modExtsArgs} ${ghcOptsArgs} ${depsArgs} > $out
       '';
     };
 

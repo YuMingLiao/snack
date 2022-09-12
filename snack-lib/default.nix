@@ -94,7 +94,7 @@ with rec {
     let
       mainModName = pkgSpec.packageMain;
       mainModSpec = let
-        memo = baseAndPkgSpecPerModName pkgSpec;
+        memo = lib.debug.traceValSeq (baseAndPkgSpecPerModName pkgSpec);
         dfs = modSpecDFS pkgSpec memo;
         modSpecs = dfsDAG dfs [ mainModName ];
       in modSpecs.${mainModName};

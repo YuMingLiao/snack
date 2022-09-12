@@ -4,7 +4,7 @@ TODO
 - [x] understand what to do when you in the middle of development while your upstream updated.
 - [] a nix build that auto detect packages needed in a hs file is probably a good start.
 - [] import parser doesn't use ghc with all packages, so -fversion-macros failed.
-
+- [] project-m36 put files by module hierarchy, but relatedness. file name with a big case may be main files.
 #developer's thought log
 
 look into ghc code? why where is a ghc_2.h?

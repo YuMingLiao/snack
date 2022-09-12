@@ -89,7 +89,7 @@ in rec {
       #      objAttrs = lib.foldl (a: b: a // b) {} (map (mod: {"${mod.moduleName}" = "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";}) modSpec.moduleImports);
       #      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
       packageList = map (p: "-package ${p}") deps;
-      ghc = ghcWith (trace "${modSpec.moduleName}'s deps:  ${toString deps}" deps);
+      ghc = ghcWith deps;
       deps = allTransitiveDeps [ modSpec ];
       exts = modSpec.moduleExtensions;
       ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts);
@@ -137,33 +137,30 @@ in rec {
       };
       phases = [ "unpackPhase" "buildPhase" ];
 
-      # echo "builtDeps: ${lib.strings.concatStringsSep "\n" builtDeps}"
       # echo "objList: ${lib.strings.concatStringsSep "\n"  objList}"
       buildPhase = ''
         mkdir -p $out
-
-        # echo "Creating dependencies symtree for module ${modSpec.moduleName}"
+        mkdir -p tmp
+        echo "builtDeps: \n  ${lib.strings.concatStringsSep "\n" builtDeps}"
+        echo "Creating dependencies symtree for module ${modSpec.moduleName}"
         ${makeSymtree}
+        ls -R
+        #echo "Make hi to out"
         ${makeHiToOut}
-        # echo "Creating module symlink for module ${modSpec.moduleName}"
+        #echo "Creating module symlink for module ${modSpec.moduleName}"
         ${makeSymModule}
-
-        # echo "Compiling module ${modSpec.moduleName}: ${
+        #echo "Compiling module ${modSpec.moduleName}: ${
           moduleToFile modSpec.moduleName
         }"
-
-        mkdir -p tmp
-
         ghc ${lib.strings.escapeShellArgs packageList} \
           -tmpdir tmp/ \
           ${moduleToFile modSpec.moduleName} -c\
           -outputdir $out \
           ${ghcOptsArgs} \
           2>&1
-        # echo "Done building module ${modSpec.moduleName}"
+        echo "Done building module ${modSpec.moduleName}"
       '';
 
-      # ls -R $out
       #            ${lib.strings.escapeShellArgs objList} \
       buildInputs = [ ghc lndir ];
     };

@@ -1,11 +1,7 @@
-{ lib, nix-freeze-files ? (import <nixpkgs> {}).haskellPackages.nix-freeze-files, runCommand ? (import <nixpkgs> {}).runCommand}:
-/*
-let
-  nix-freeze-files = import (builtins.fetchGit {
-    url = https://github.com/YuMingLiao/nix-freeze-files;
-    rev = "672d9a1c2e4574a448206d30062e0d1d687faecd";
-  }) {};
-in*/
+{ lib
+, nix-freeze-files ? (import <nixpkgs> { }).haskellPackages.nix-freeze-files
+, runCommand ? (import <nixpkgs> { }).runCommand }:
+
 with lib.attrsets;
 with builtins;
 with lib.lists;
@@ -32,20 +28,20 @@ with lib; rec {
       (foldl' (a: b: a // b) (regularAttrs s)
         (map flatten (separatelyAddAttrPath (setAttrs s))));
   replace = s: v: mapAttrs (_: _: v) s;
-  frozen = src:
-    import "${freeze src}/default.nix";
-  freeze = source: (import <nixpkgs> {}).stdenv.mkDerivation {
+  frozen = src: import "${freeze src}/default.nix";
+  freeze = source:
+    (import <nixpkgs> { }).stdenv.mkDerivation {
       name = baseNameOf source + "-frozen";
       src = source;
-      buildInputs = [nix-freeze-files];
+      buildInputs = [ nix-freeze-files ];
       phases = [ "buildPhase" ];
       buildPhase = ''
-      mkdir -p $out; 
-      echo "nix-freeze-files -v ${source} -o $out"
-      ls ${source}
-      nix-freeze-files -v ${source} -o $out; 
-      cat $out/default.nix;
-'';
-};
+        mkdir -p $out; 
+        echo "nix-freeze-files -v ${source} -o $out"
+        ls ${source}
+        nix-freeze-files -v ${source} -o $out; 
+        cat $out/default.nix;
+      '';
+    };
 }
 
