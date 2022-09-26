@@ -147,11 +147,9 @@ in rec {
         ls -R
         #echo "Make hi to out"
         ${makeHiToOut}
-        #echo "Creating module symlink for module ${modSpec.moduleName}"
+        echo "Creating module symlink for module ${modSpec.moduleName}"
         ${makeSymModule}
-        #echo "Compiling module ${modSpec.moduleName}: ${
-          moduleToFile modSpec.moduleName
-        }"
+        echo "Compiling module ${modSpec.moduleName}: ${moduleToFile modSpec.moduleName}"
         ghc ${lib.strings.escapeShellArgs packageList} \
           -tmpdir tmp/ \
           ${moduleToFile modSpec.moduleName} -c\

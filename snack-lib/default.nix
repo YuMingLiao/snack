@@ -2,7 +2,7 @@
 # TODO: currently single out derivations prepend the PWD to the path
 # TODO: make sure that filters for "base" are airtight
 # TODO: document the sh*t out of these functions
-{ pkgs, ghc-version ? "ghc8107"
+{ pkgs, ghc-version ? "ghc924"
 , ghcWithPackages ? pkgs.haskell.packages.${ghc-version}.ghcWithPackages
 , haskellPackages ? pkgs.haskell.packages.${ghc-version} }:
 
@@ -94,6 +94,7 @@ with rec {
     let
       mainModName = pkgSpec.packageMain;
       mainModSpec = let
+        #TODO: check if memo memo.  remove pkgSpec because it repeats
         memo = lib.debug.traceValSeq (baseAndPkgSpecPerModName pkgSpec);
         dfs = modSpecDFS pkgSpec memo;
         modSpecs = dfsDAG dfs [ mainModName ];

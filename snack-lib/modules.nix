@@ -58,7 +58,7 @@ with lib.debug; rec {
       base = baseByModuleName modName;
       modExtsArgs = lib.strings.escapeShellArgs (map (x: "-X${x}") (extsByModuleName modName));
       deps = (depsByModuleName modName);
-      depsArgs = lib.strings.escapeShellArgs (["-package "] ++ deps); 
+      depsArgs = lib.strings.escapeShellArgs (if lib.lists.length deps == 0 then [""] else ["-package "] ++ deps); 
       ghc = haskellPackages.ghcWithPackages (ps: [ ps.ghc ] ++ map (x: ps.${x}) deps); 
       ghcOptsArgs = lib.strings.escapeShellArgs (ghcOptsByModuleName modName);
       importParser = runCommand "import-parser" { buildInputs = [ ghc ]; }

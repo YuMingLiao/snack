@@ -1,43 +1,27 @@
 TODO
 - [x] check if it still works.
-- [] let nix compile project-m36 by snack. Agile development of big haskell dependency.
 - [x] understand what to do when you in the middle of development while your upstream updated.
-- [] a nix build that auto detect packages needed in a hs file is probably a good start.
-- [] import parser doesn't use ghc with all packages, so -fversion-macros failed.
+- [x] import parser doesn't use ghc with all packages, so -fversion-macros failed.
+- [x] my main is Tutoriald.tutd. exe is tutoriald.tutd. wierd.
+- [] content-addressed readDir may replace nix-freeze-files
+#refactoring
+- [] DO I really need memo to speed up? I am confused. I just want to run base path first, once and for all. It seems not fit in lazy nix.
+- [] baseAndPkgSpec ... it seems PkgSpec are the same.
+- Q. Do I really need transitive dependencies to compile a non-leaf module?
+
+# multi-exes
+- [] check multi roots in a dfsDAG
 - [] project-m36 put files by module hierarchy, but relatedness. file name with a big case may be main files.
-#developer's thought log
+- [] It seems that tutd.nix and websocket.nix can't share compiled lib. Why? They are in the same src. Well, pkgSepc is not the same. So Maybe multi main in a package.nix is a good idea.
 
-look into ghc code? why where is a ghc_2.h?
-Or see if I can figure out relationships between module trees and redefined warnings?
-
-tmpdir or not is irrelavant.
-delete tmp dir or not is irrelavant.
-
-something is wrong in dfsDAG roots.
-if import another root, it fails.
-maybe i should build a importDAG and get a toposort first.
-Now it seems works right.
-
-I use symLinkJoin to bring cabal_macros.h, is it related to the warning?
-
-It turns out I don't need cabal_macros.h now. ghc_??.h has it. What a surprise!
+#recursive-nix
+- [] let nix compile project-m36 by snack. Agile development of big haskell dependency.
+- [] haskellPackages.incremental-project-m36 for lib and exe (seems achievable)
 
 #find package by imports
-
+- [] a nix build that auto detect packages needed in a hs file is probably a good start.
 Well, while hoogle get packages names in stackage, I still need to manually add a package I want to try and ghcWith to make the module I am trying to compile. So auto-find-package-by-module cannot totally work.
 
-#ca-derivations
+#optimization
+- [] maybe add import-parser to nix-freeze-files will acclerate `snack build`
 
-stderr: error: unrecognised flag '--experimental-features 'ca-derivations''
-Try '/run/current-system/sw/bin/nix-build --help' for more information.
-
-maybe add import-parser to nix-freeze-files will acclerate `snack build`
-
-
-#nonsense
-module drv can't be one between one edit.
-
-
---
-
-ghc-pkg find-module only works if you have decisive package list.

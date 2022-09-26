@@ -70,6 +70,7 @@ with lib; rec {
 
   # Traverses all transitive packages and returns all the module specs in this topPkgSpec with base and pkg info.
   # contains a module with given name.
+  # caveat: main candidate files in subdirectories can be seen in this attribute set. eq. set `main = "TutorialD.tutd"` in package.nix
   baseAndPkgSpecPerModName = topPkgSpec:
     dfsDAG {
       f = pkgSpec: _:
