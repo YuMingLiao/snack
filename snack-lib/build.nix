@@ -1,4 +1,4 @@
-{ runCommand, lib, callPackage, stdenv, symlinkJoin, xorg }:
+{ runCommand, lib, callPackage, stdenv, symlinkJoin, xorg, pkgs}:
 
 with (callPackage ./modules.nix { });
 with (callPackage ./lib.nix { });
@@ -35,7 +35,7 @@ in rec {
       objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
       deps = allTransitiveDeps [ moduleSpec ];
       ghc = ghcWith deps;
-      ghcOptsArgs = lib.strings.escapeShellArgs moduleSpec.moduleGhcOpts;
+      ghcOptsArgs = lib.strings.escapeShellArgs (moduleSpec.moduleGhcOpts ++ (if pkgs.targetPlatform.isMusl then staticLinkingArgs else []));
       exts = moduleSpec.moduleExtensions;
       packageList = map (p: "-package ${p}") deps;
       relExePath = "bin/${name}";
@@ -43,6 +43,12 @@ in rec {
         moduleSpec.moduleDirectories;
       copyCBitsFiles = if cbits != null then "cp ${cbits}/* ." else "";
       linkCBitsCode = if cbits != null then "*.c" else "";
+      staticLinkingArgs = [
+            "-optl-static"
+            "-L${pkgs.gmp6.override { withStatic = true; }}/lib"
+            "-L${pkgs.zlib.static}/lib"
+            "-L${pkgs.libffi.overrideAttrs (old: { dontDisableStatic = true; })}/lib"
+          ];
 
       drv = runCommand name { buildInputs = [ ]; } ''
         echo "Start linking Main Module...${moduleSpec.moduleName} to ${name}"
