@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# vim: ft=sh sw=2 et
+
+set -euo pipefail
+
+test() {
+  ldd $(jq --raw-output '.[0].result.exe_path' $($SNACK build))  
+}
+
+SNACK="snack" test
