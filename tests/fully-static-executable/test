@@ -4,7 +4,10 @@
 set -euo pipefail
 
 test() {
-  ldd $(jq --raw-output '.[0].result.exe_path' $($SNACK build))  
+  TMP_FILE=$(mktemp)
+  ldd $(jq --raw-output '.[0].result.exe_path' $($SNACK build)) &> $TMP_FILE
+  diff golden $TMP_FILE
+  rm $TMP_FILE 
 }
 
 SNACK="snack" test
