@@ -65,7 +65,7 @@ with builtins; rec {
           label = elemLabel elem;
           children = elemChildren elem;
         in if lib.lists.elem label path then
-          abort "cycle: ${toString (path ++ [ label ])}"
+          abort "cycle::${toString (path ++ [ label ])}"
         else if lib.lists.elem label traversed then
           acc
         else

@@ -95,7 +95,7 @@ with rec {
       mainModName = pkgSpec.packageMain;
       mainModSpec = let
         #TODO: check if memo memo.  remove pkgSpec because it repeats
-        memo = lib.debug.traceValSeq (baseAndPkgSpecPerModName pkgSpec);
+        memo = baseAndPkgSpecPerModName pkgSpec;
         dfs = modSpecDFS pkgSpec memo;
         modSpecs = dfsDAG dfs [ mainModName ];
       in modSpecs.${mainModName};

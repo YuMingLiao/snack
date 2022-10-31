@@ -13,7 +13,7 @@ with lib; rec {
       pName = if isExe && builtins.isNull name then
         lib.strings.toLower main
       else
-        name;
+        if !builtins.isNull name then name else "unknown-package-name";
     }; {
       packageIsExe = !builtins.isNull main;
       packageName = pName;

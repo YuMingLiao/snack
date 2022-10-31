@@ -29,10 +29,11 @@ with lib; rec {
         (map flatten (separatelyAddAttrPath (setAttrs s))));
   replace = s: v: mapAttrs (_: _: v) s;
   frozen = src: import "${freeze src}/default.nix";
-  freeze = source:
+  freeze = src:
+    let source = /. + src; in
     (import <nixpkgs> { }).stdenv.mkDerivation {
       name = baseNameOf source + "-frozen";
-      src = source;
+      src = /. + source;
       buildInputs = [ nix-freeze-files ];
       phases = [ "buildPhase" ];
       buildPhase = ''

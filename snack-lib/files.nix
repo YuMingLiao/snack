@@ -83,7 +83,7 @@ with builtins; rec {
       dirName = "";
     }];
   # it's a mapping from files to its base
-  filesWithBaseInDir = base: let result = replace (flatten (frozen base)) base; in result; 
+  filesWithBaseInDir = base: replace (flatten (frozen base)) base; 
   filesWithBaseInDir' = base:
     dfsDAG {
       f = info@{ dir, dirName }:

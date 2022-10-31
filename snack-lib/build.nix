@@ -45,12 +45,13 @@ in rec {
       linkCBitsCode = if cbits != null then "*.c" else "";
       staticLinkingArgs = [
             "-optl-static"
+            "-L${pkgs.ncurses.override { enableStatic = true; }}/lib"
             "-L${pkgs.gmp6.override { withStatic = true; }}/lib"
             "-L${pkgs.zlib.static}/lib"
             "-L${pkgs.libffi.overrideAttrs (old: { dontDisableStatic = true; })}/lib"
           ];
 
-      drv = runCommand name { buildInputs = [ ]; } ''
+      drv = runCommand name { buildInputs = []; } ''
         echo "Start linking Main Module...${moduleSpec.moduleName} to ${name}"
         mkdir -p $out/bin
         ${copyCBitsFiles}
