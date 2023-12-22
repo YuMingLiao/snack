@@ -97,7 +97,7 @@ with lib.debug; rec {
         ghc = haskellPackages.ghcWithPackages (ps: with ps; (map (p: ps.${p}) allDeps));
       in
       builtins.readFile (stdenv.mkDerivation {
-      name = "${modImport}-dpenedency";
+      name = "${modImport}-dependency";
       buildInputs = [ghc];
       phases = ["buildPhase"];
       buildPhase = ''

@@ -95,7 +95,7 @@ in rec {
     let
       #      objAttrs = lib.foldl (a: b: a // b) {} (map (mod: {"${mod.moduleName}" = "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";}) modSpec.moduleImports);
       #      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
-      packageList = map (p: "-package ${p}") deps;
+      packageList = map (p: "-package ${p}") (lib.lists.remove "attoparsec" deps);
       ghc = ghcWith deps;
       deps = allTransitiveDeps [ modSpec ];
       exts = modSpec.moduleExtensions;
@@ -145,16 +145,16 @@ in rec {
       phases = [ "unpackPhase" "buildPhase" ];
 
       # echo "objList: ${lib.strings.concatStringsSep "\n"  objList}"
+      # echo "builtDeps: \n  ${lib.strings.concatStringsSep "\n" builtDeps}"
+      # echo "Creating dependencies symtree for module ${modSpec.moduleName}"
+      # echo "Make hi to out"
+      # echo "Creating module symlink for module ${modSpec.moduleName}"
+      # echo "Done building module ${modSpec.moduleName}"
       buildPhase = ''
         mkdir -p $out
         mkdir -p tmp
-        echo "builtDeps: \n  ${lib.strings.concatStringsSep "\n" builtDeps}"
-        echo "Creating dependencies symtree for module ${modSpec.moduleName}"
         ${makeSymtree}
-        ls -R
-        #echo "Make hi to out"
         ${makeHiToOut}
-        echo "Creating module symlink for module ${modSpec.moduleName}"
         ${makeSymModule}
         echo "Compiling module ${modSpec.moduleName}: ${moduleToFile modSpec.moduleName}"
         ghc ${lib.strings.escapeShellArgs packageList} \
@@ -163,7 +163,6 @@ in rec {
           -outputdir $out \
           ${ghcOptsArgs} \
           2>&1
-        echo "Done building module ${modSpec.moduleName}"
       '';
 
       #            ${lib.strings.escapeShellArgs objList} \

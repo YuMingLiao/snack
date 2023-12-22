@@ -6,11 +6,18 @@ with lib.attrsets;
 with builtins;
 with lib.lists;
 with lib; rec {
-  setAttrs = s: filterAttrs (n: v: isAttrs v) s;
+  /* Return attributes that evaluates to a set
+
+    Example:
+      x = { a = { c = 3; }; b = 3; }
+      setAttrs x
+      => { a = { c = 3; }; }
+  */
+  setAttrs = s: filterAttrs (_: v: isAttrs v) s;
   regularAttrs = s: filterAttrs (_: v: !(isAttrs v)) s;
   isEmpty = s: s == { };
   minus = s1: s2: removeAttrs s1 (attrNames s2);
-  separate = s: mapAttrsToList (n: v: v) s;
+  separate = s: mapAttrsToList (_: v: v) s;
   separatelyAddAttrPath = s:
     mapAttrsToList (n: v:
       mapAttrs' (inner_n: inner_v: nameValuePair (n + "/" + inner_n) inner_v) v)
@@ -39,10 +46,10 @@ with lib; rec {
       buildPhase = ''
         mkdir -p $out; 
         echo "nix-freeze-files -v ${source} -o $out"
-        ls ${source}
         nix-freeze-files -v ${source} -o $out; 
-        cat $out/default.nix;
       '';
+        #ls ${source}
+        #cat $out/default.nix;
     };
 }
 
