@@ -23,6 +23,7 @@ with builtins; rec {
       moduleExtensions = modExts;
     };
 
+  # use by-module-name functions to create a Fold 
   moduleSpecFold = { baseByModuleName, filesByModuleName, dirsByModuleName
     , depsByModuleName, extsByModuleName, ghcOptsByModuleName }:
     let
@@ -37,6 +38,7 @@ with builtins; rec {
       (lib.lists.unique 
       (map (findDep (depsByModuleName modName)) (modExternalImportsNames modName))))) ++ depsByModuleName modName; #still needs customized deps
     in {
+      # make a module spec so that a module spec graph can be created. 
       f = modName: traversedModSpecs: {
         "${modName}" = makeModuleSpec modName
           (map (mn: traversedModSpecs.${mn}) (modImportsNames modName))
@@ -61,7 +63,8 @@ with builtins; rec {
   allTransitiveDirectories = allTransitiveLists "moduleDirectories";
   allTransitiveFiles = allTransitiveLists "moduleFiles";
   allTransitiveImports = allTransitiveLists "moduleImports";
-
+  
+  # use moduleImports in modSpec to find all elements in one transitive attribute.
   allTransitiveLists = attr: modSpecs:
     lib.lists.unique (dfsDAG {
       f = modSpec: _: lib.lists.foldl (x: y: x ++ [ y ]) [ ] modSpec.${attr};
@@ -71,8 +74,7 @@ with builtins; rec {
       elemChildren = modSpec: modSpec.moduleImports;
     } modSpecs);
 
-  # Takes a package spec and returns (modSpecs -> Fold)
-
+  # turn package spec into module specs
   modSpecFoldFromPackageSpec = pkgSpec:
     let
       baseByModuleName = modName:
@@ -98,7 +100,8 @@ with builtins; rec {
       extsByModuleName = extsByModuleName;
       ghcOptsByModuleName = ghcOptsByModuleName;
     };
-
+  # a module spec Fold
+  # memo, which is baseAndPkgSpecPerModName pkgSpec 
   modSpecDFS = pkgSpec: memo:
     let
       baseByModuleName = modName:

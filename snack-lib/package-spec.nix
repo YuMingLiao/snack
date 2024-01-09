@@ -3,15 +3,18 @@
 with (callPackage ./modules.nix { });
 with (callPackage ./lib.nix { });
 with lib.attrsets;
+with lib.lists;
 with lib; rec {
-
+  
+  # mkPackageSpec unify attributes as per module and accessible by a module name,
+  # and recursively do so to sub packages. You can look up what a module need in that package.
   mkPackageSpec = packageDescr@{ src ? [ ], name ? null, main ? null
     , ghcOpts ? [ ], dependencies ? [ ], extensions ? [ ], extra-files ? [ ]
     , extra-directories ? [ ], packages ? [ ] }:
     with rec {
       isExe = !builtins.isNull main;
       pName = if isExe && builtins.isNull name then
-        lib.strings.toLower main
+        strings.toLower main
       else
         if !builtins.isNull name then name else "unknown-package-name";
     }; {
@@ -27,7 +30,7 @@ with lib; rec {
       packageExtraFiles = mkPerModuleAttr extra-files;
       packageExtraDirectories = mkPerModuleAttr extra-directories;
 
-      packagePackages = map mkPackageSpec packages;
+      packagePackages = map mkPackageSpec packages; # recursively mkPackageSepc here.
     };
 
   mkPerModuleAttr = attr:
@@ -42,7 +45,7 @@ with lib; rec {
 
   flattenPackages = topPkgSpec:
     [ topPkgSpec ]
-    ++ lib.lists.concatMap (flattenPackages) topPkgSpec.packagePackages;
+    ++ concatMap (flattenPackages) topPkgSpec.packagePackages;
 
   # Traverses all transitive packages and returns the first package spec that
   # contains a module with given name. If none is found, returns the supplied
@@ -50,16 +53,16 @@ with lib; rec {
   pkgSpecAndBaseByModuleName = topPkgSpec: modName:
     let
       foo = pkgSpec:
-        lib.findFirst (base: lib.lists.elem modName (listModulesInDir base))
+        findFirst (base: elem modName (listModulesInDir base))
         null pkgSpec.packageSourceDirs;
-      bar = lib.concatMap (pkgSpec:
+      bar = concatMap (pkgSpec:
         let base = foo pkgSpec;
         in if base == null then [ ] else [{ inherit pkgSpec base; }])
         (flattenPackages topPkgSpec);
-    in if lib.length bar <= 0 then
+    in if length bar <= 0 then
       null
-    else if lib.length bar == 1 then
-      lib.head bar
+    else if length bar == 1 then
+      head bar
     else
       abort
       "Refusing to return base, module name was found more than once: ${modName}";

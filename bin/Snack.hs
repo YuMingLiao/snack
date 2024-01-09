@@ -10,6 +10,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
+
 module Main where
 import Control.Applicative
 import Control.Monad
