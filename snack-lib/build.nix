@@ -6,6 +6,7 @@ with (callPackage ./module-spec.nix { });
 with lib.attrsets;
 with lib.strings;
 with builtins;
+with lib.debug;
 let lndir = xorg.lndir;
 in rec {
 
@@ -15,7 +16,7 @@ in rec {
   buildMain = ghcWith: mainModSpec:
     let
       traversed = buildModulesRec ghcWith { } mainModSpec.moduleImports;
-      builtDeps = attrValues (mapAttrs (n: v: removeSuffix "${moduleToObject n}" v) traversed);
+      builtDeps = attrValues (mapAttrs (n: v: removeSuffix "${moduleToObject n}" v) (traceValSeq traversed));
       objList = map (x: traversed.${x.moduleName}) mainModSpec.moduleImports;
       # XXX: the main modules need special handling regarding the object name
     in traversed // {
@@ -54,6 +55,7 @@ in rec {
       drv = runCommand name { buildInputs = []; } ''
         echo "Start linking Main Module...${moduleSpec.moduleName} to ${name}"
         mkdir -p $out/bin
+        mkdir -p $out/intermediate
         ${copyCBitsFiles}
         ${ghc}/bin/ghc \
           ${lib.strings.escapeShellArgs packageList} \
@@ -61,6 +63,7 @@ in rec {
           ${linkCBitsCode} \
           ${ghcOptsArgs} \
           -o $out/${relExePath}
+        cp ${lib.strings.escapeShellArgs objList} $out/intermediate
       '';
     in {
       out = drv;
@@ -163,6 +166,13 @@ in rec {
           -outputdir $out \
           ${ghcOptsArgs} \
           2>&1
+        echo ""
+        echo "tmp/:"
+        ls tmp/
+        echo ""
+        echo "out:"
+        ls $out
+        echo ""
       '';
 
       #            ${lib.strings.escapeShellArgs objList} \

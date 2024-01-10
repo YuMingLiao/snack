@@ -1,7 +1,7 @@
 {
   "Snack.hs" = builtins.path {
     path = /root/snack/bin/Snack.hs;
-    sha256 = "0ign6w4q2m95ig57h4ifsb4w3hibgxdb3wdg198cvl2lqvzkyf2n";
+    sha256 = "12vxdcvfr40q0lsbw1r22q6gyiilvpihf845ggw4wnsc0qxdz6bj";
     };
   "package.nix" = builtins.path {
     path = /root/snack/bin/package.nix;

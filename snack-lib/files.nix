@@ -63,8 +63,8 @@ with builtins; rec {
      in go dir "";
   */
   #listFilesInDir and filesWithBaseInDir may be replaced by nix-freeze-files
-  listFilesInDir' = dir: leaves (frozen dir);
-  listFilesInDir = dir:
+  listFilesInDir = dir: leaves (frozen dir);
+  listFilesInDir' = dir:
     dfsDAG {
       f = info@{ dir, dirName }:
         _:
@@ -83,8 +83,8 @@ with builtins; rec {
       dirName = "";
     }];
   # it's a mapping from files to its base
-  filesWithBaseInDir' = base: replace (flatten (frozen (lib.debug.traceVal base))) base; 
-  filesWithBaseInDir = base:
+  filesWithBaseInDir = base: replace (flatten (frozen (lib.debug.traceVal base))) base; 
+  filesWithBaseInDir' = base:
     dfsDAG {
       f = info@{ dir, dirName }:
         _:
