@@ -47,7 +47,7 @@ with lib; rec {
            else abort ("some files in " + toString src + " has been changed. Please nix-freeze-files it again."))); 
   isFrozen = base: nestedSet:
     let unchecked = mapAttrsRecursive (path: _: "${/. + (toString base) + (concatMapStrings (x: "/" + x) path)}") nestedSet; 
-    in trace (toString base) (traceValSeq unchecked == traceValSeq nestedSet);
+    in trace (toString base) (unchecked == nestedSet);
  
   freeze = src:
     let source = /. + src; in

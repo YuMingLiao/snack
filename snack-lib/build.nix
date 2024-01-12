@@ -63,12 +63,12 @@ in rec {
           ${linkCBitsCode} \
           ${ghcOptsArgs} \
           -o $out/${relExePath}
-        cp ${lib.strings.escapeShellArgs objList} $out/intermediate
       '';
     in {
       out = drv;
       relExePath = relExePath;
     };
+    #cp ${lib.strings.escapeShellArgs objList} $out/intermediate
 
   # Build the given modules (recursively) using the given accumulator to keep
   # track of which modules have been built already
