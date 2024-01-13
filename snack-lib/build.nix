@@ -8,6 +8,7 @@ with lib.strings;
 with builtins;
 with lib.debug;
 let lndir = xorg.lndir;
+    rsync = pkgs.rsync;
 in rec {
 
   # Returns an attribute set where the keys are all the built module names and
@@ -16,12 +17,12 @@ in rec {
   buildMain = ghcWith: mainModSpec:
     let
       traversed = buildModulesRec ghcWith { } mainModSpec.moduleImports;
-      builtDeps = attrValues (mapAttrs (n: v: removeSuffix "${moduleToObject n}" v) (traceValSeq traversed));
-      objList = map (x: traversed.${x.moduleName}) mainModSpec.moduleImports;
+      builtDeps = attrValues (mapAttrs (n: v: dirOf v) traversed);
+      #objList = map (x: traversed.${x.moduleName}) mainModSpec.moduleImports;
       # XXX: the main modules need special handling regarding the object name
     in traversed // {
       "${mainModSpec.moduleName}" =
-        "${buildModule ghcWith mainModSpec builtDeps objList}/Main.o";
+        "${buildModule ghcWith mainModSpec builtDeps}/Main.o";
     };
 
   # returns a attrset where the keys are the module names and the values are
@@ -33,7 +34,9 @@ in rec {
     }:
     let
       objAttrs = buildMain ghcWith moduleSpec;
-      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
+      #shareList = attrValues (mapAttrs (_: v: dirOf v) objAttrs);
+      mainShare = attrValues (mapAttrs (_: v: dirOf v) (filterAttrs (_: v: baseNameOf v == "Main.o") objAttrs));
+      objList = attrValues objAttrs;
       deps = allTransitiveDeps [ moduleSpec ];
       ghc = ghcWith deps;
       ghcOptsArgs = lib.strings.escapeShellArgs (moduleSpec.moduleGhcOpts ++ (if pkgs.targetPlatform.isMusl then staticLinkingArgs else []));
@@ -51,11 +54,21 @@ in rec {
             "-L${pkgs.zlib.static}/lib"
             "-L${pkgs.libffi.overrideAttrs (old: { dontDisableStatic = true; })}/lib"
           ];
+      symlinkShare = if lib.lists.length mainShare >= 1 then ''
+        for fromdir in ${
+          lib.strings.escapeShellArgs mainShare
+        }; 
+        do 
+          rsync -a --include="*.hie" --exclude="*/" $fromdir/* $out/share 
+        done''
+      else
+        "";
 
-      drv = runCommand name { buildInputs = []; } ''
+
+        drv = runCommand name { buildInputs = [ lndir rsync]; } ''
         echo "Start linking Main Module...${moduleSpec.moduleName} to ${name}"
         mkdir -p $out/bin
-        mkdir -p $out/intermediate
+        mkdir -p $out/share
         ${copyCBitsFiles}
         ${ghc}/bin/ghc \
           ${lib.strings.escapeShellArgs packageList} \
@@ -63,28 +76,35 @@ in rec {
           ${linkCBitsCode} \
           ${ghcOptsArgs} \
           -o $out/${relExePath}
+        ${symlinkShare} 
       '';
     in {
       out = drv;
       relExePath = relExePath;
     };
-    #cp ${lib.strings.escapeShellArgs objList} $out/intermediate
 
   # Build the given modules (recursively) using the given accumulator to keep
   # track of which modules have been built already
   # XXX: doesn't work if several modules in the DAG have the same name
   buildModulesRec = ghcWith: empty: modSpecs:
+    let
+      debugTraversed = mn: trvrsd:
+        traceIf 
+          (mn == "ProjectM36.Server.project-m36-server")
+          { "ProjectM36.Server" = trvrsd."ProjectM36.Server";
+            "ProjectM36.Server.ParseArgs" = trvrsd."ProjectM36.Server.ParseArgs";
+          }        
+          trvrsd;
+    in
     dfsDAG {
       f = mod: traversed:
         let
           builtDeps = map (x:
             removeSuffix "${moduleToObject x.moduleName}"
-            traversed.${x.moduleName}) (allTransitiveImports [ mod ]);
-          objList = map (x: traversed.${x.moduleName}) mod.moduleImports;
+            (debugTraversed x.moduleName traversed).${x.moduleName}) (allTransitiveImports [ mod ]);
         in {
           "${mod.moduleName}" =
-            # need to give it imported modules's obj info.
-            "${buildModule ghcWith mod builtDeps objList}/${
+            "${buildModule ghcWith mod builtDeps}/${
               moduleToObject mod.moduleName
             }";
         };
@@ -94,10 +114,8 @@ in rec {
       empty = empty;
     } modSpecs;
 
-  buildModule = ghcWith: modSpec: builtDeps: objList:
+  buildModule = ghcWith: modSpec: builtDeps:
     let
-      #      objAttrs = lib.foldl (a: b: a // b) {} (map (mod: {"${mod.moduleName}" = "${buildModule ghcWith mod}/${moduleToObject mod.moduleName}";}) modSpec.moduleImports);
-      #      objList = lib.attrsets.mapAttrsToList (x: y: y) objAttrs;
       packageList = map (p: "-package ${p}") (lib.lists.remove "attoparsec" deps);
       ghc = ghcWith deps;
       deps = allTransitiveDeps [ modSpec ];
@@ -105,24 +123,27 @@ in rec {
       ghcOpts = modSpec.moduleGhcOpts ++ (map (x: "-X${x}") exts);
       ghcOptsArgs = lib.strings.escapeShellArgs ghcOpts;
       objectName = modSpec.moduleName;
-      #builtDeps = map (buildModule ghcWith) (allTransitiveImports [modSpec]);
-      #depsDirs = map (x: x + "/") builtDeps;
       base = modSpec.moduleBase;
+      
       makeSymtree = if lib.lists.length builtDeps >= 1 then
+        # TODO: ln .o here is not necessary.
         "for fromdir in ${
           lib.strings.escapeShellArgs builtDeps
-        }; do lndir $fromdir . > /dev/null; done"
+        }; do lndir $fromdir . &> /dev/null ; done"
       else
         "";
-      makeHiToOut = if lib.lists.length builtDeps >= 1 then
-        "for fromdir in ${
-          lib.strings.escapeShellArgs builtDeps
-        }; do lndir $fromdir $out > /dev/null; done"
+      #seems ghc Main.o bring all lib.hie to main folder, causing duplication.
+      makeHiToOut = if lib.lists.length builtDeps >= 1 then ''
+        for fromdir in ${lib.strings.escapeShellArgs builtDeps}; 
+        do
+          rsync -ar --include="*/" --include="*.hi" --include="*.o" --include="*.hie" --exclude="*" . $out; 
+
+        done''
       else
         "";
 
       makeSymModule =
-        "lndir ${singleOutModule base modSpec.moduleName} . > /dev/null";
+        "lndir ${singleOutModule base modSpec.moduleName} . &> /dev/null;";
       pred = file: path: type:
         let
           topLevel = (builtins.toString base) + "/";
@@ -139,6 +160,18 @@ in rec {
           (expected == actual)
           || (t == "directory" && (lib.strings.hasPrefix actual expected)))
         modSpec.moduleFiles) >= 1) base;
+
+     debugOut = 
+        if modSpec.moduleName == "ProjectM36.Server" 
+        then '' 
+          echo "out:"
+          ls $out 
+          ''
+        else if modSpec.moduleName == "ProjectM36.Server.ParseArgs" 
+        then ''echo "out:"; ls -R $out/;''
+        else if modSpec.moduleName == "Lib.Lib2.Lib2"
+        then ''echo "out:"; ls -R $out;'' else "";
+    
     in stdenv.mkDerivation {
       name = objectName;
       src = symlinkJoin {
@@ -152,30 +185,27 @@ in rec {
       # echo "Creating dependencies symtree for module ${modSpec.moduleName}"
       # echo "Make hi to out"
       # echo "Creating module symlink for module ${modSpec.moduleName}"
+      # echo "Compiling module ${modSpec.moduleName}: ${moduleToFilePath modSpec.moduleName}"
       # echo "Done building module ${modSpec.moduleName}"
       buildPhase = ''
         mkdir -p $out
         mkdir -p tmp
+        echo "makeSymTree"
         ${makeSymtree}
-        ${makeHiToOut}
+        echo "makeSymModule"
         ${makeSymModule}
-        echo "Compiling module ${modSpec.moduleName}: ${moduleToFile modSpec.moduleName}"
+        echo "makeHiToOut"
+        ${makeHiToOut}
+        echo "compiling"
         ghc ${lib.strings.escapeShellArgs packageList} \
           -tmpdir tmp/ \
-          ${moduleToFile modSpec.moduleName} -c\
-          -outputdir $out \
+          ${moduleToFilePath modSpec.moduleName} -c\
+          -outputdir $out/ \
           ${ghcOptsArgs} \
           2>&1
-        echo ""
-        echo "tmp/:"
-        ls tmp/
-        echo ""
-        echo "out:"
-        ls $out
-        echo ""
       '';
 
       #            ${lib.strings.escapeShellArgs objList} \
-      buildInputs = [ ghc lndir ];
+      buildInputs = [ ghc lndir rsync];
     };
 }

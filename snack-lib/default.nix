@@ -175,5 +175,5 @@ with rec {
 
 }; {
   inherit inferBuild inferGhci buildAsExecutable buildAsLibrary executable
-    buildHoogle specsFromPackageFile;
+    buildHoogle specsFromPackageFile libraryModSpecs executableMainModSpec;
 }

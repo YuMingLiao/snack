@@ -7,7 +7,9 @@ with builtins;
 with lib.attrsets;
 with lib.debug; rec {
   # Turns a module name to a file
-  moduleToFile = mod: (lib.strings.replaceChars [ "." ] [ "/" ] mod) + ".hs";
+  moduleToFilePath = mod: (lib.strings.replaceChars [ "." ] [ "/" ] mod) + ".hs";
+
+  moduleToDirPath = mod: dirOf (moduleToFilePath mod);
 
   # Turns a module name into the filepath of its object file
   # TODO: bad name, this is module _name_ to object
@@ -19,11 +21,11 @@ with lib.debug; rec {
     (lib.strings.replaceChars [ "/" ] [ "." ] file);
 
   # Singles out a given module (by module name) (derivation)
-  singleOutModule = base: mod: singleOut base (moduleToFile mod);
+  singleOutModule = base: mod: singleOut base (moduleToFilePath mod);
 
   # Singles out a given module (by module name) (path to module file)
   singleOutModulePath = base: mod:
-    "${singleOut base (moduleToFile mod)}/${moduleToFile mod}";
+    "${singleOut base (moduleToFilePath mod)}/${moduleToFilePath mod}";
 
   #TODO Maybe hie files helps. Maybe vim can produce an import change notification.
   #TODO ghc-pkg find-module may helps.
@@ -48,7 +50,7 @@ with lib.debug; rec {
     (lib.filterAttrs (n: _: isHaskellModuleFile n) (filesWithBaseInDir dir));
 
   doesModuleExist = baseByModuleName: modName:
-    doesFileExist (baseByModuleName modName) (moduleToFile modName);
+    doesFileExist (baseByModuleName modName) (moduleToFilePath modName);
 
   # Lists all module dependencies, not limited to modules existing in this
   # project

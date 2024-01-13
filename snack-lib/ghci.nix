@@ -25,7 +25,7 @@ rec {
         map
           (mod:
             builtins.toString (mod.moduleBase) +
-              "/${moduleToFile mod.moduleName}"
+              "/${moduleToFilePath mod.moduleName}"
           )
           modSpecs;
 
