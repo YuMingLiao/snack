@@ -17,7 +17,8 @@ in rec {
   buildMain = ghcWith: mainModSpec:
     let
       traversed = buildModulesRec ghcWith { } mainModSpec.moduleImports;
-      builtDeps = attrValues (mapAttrs (n: v: dirOf v) traversed);
+      #TODO check if removeSuffix is useless
+      builtDeps = attrValues (mapAttrs (n: v: removeSuffix "${moduleToObject n}" v) (traceValSeq traversed));
       #objList = map (x: traversed.${x.moduleName}) mainModSpec.moduleImports;
       # XXX: the main modules need special handling regarding the object name
     in traversed // {
@@ -59,7 +60,7 @@ in rec {
           lib.strings.escapeShellArgs mainShare
         }; 
         do 
-          rsync -a --include="*.hie" --exclude="*/" $fromdir/* $out/share 
+          rsync -ar $fromdir/* $out/share 
         done''
       else
         "";
@@ -137,7 +138,6 @@ in rec {
         for fromdir in ${lib.strings.escapeShellArgs builtDeps}; 
         do
           rsync -ar --include="*/" --include="*.hi" --include="*.o" --include="*.hie" --exclude="*" . $out; 
-
         done''
       else
         "";
