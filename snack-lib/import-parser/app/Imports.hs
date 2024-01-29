@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <$>" #-}
@@ -28,7 +29,7 @@ import qualified GHC.Types.SourceError as HscTypes
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified System.Process as Process
 import System.IO (stderr)
-
+import qualified GHC.Types.Error as Error
 main :: IO ()
 main = do
     (fp:exts) <- getArgs >>= \case
@@ -71,22 +72,22 @@ main = do
         -- Read the file that we want to parse
         str <- liftIO $ filterBOM <$> readFile fp2
 
-        runParser dflags3 fp2 str Parser.parseModule >>= \case
-          Lexer.POk _ (SrcLoc.L _ res) -> pure res
+        runParser dflags3 fp2 str Parser.parseModule -- >>= \case
+--          !(Lexer.POk _ (SrcLoc.L _ res)) -> pure res
+--
+--          !(Lexer.PFailed pState)  -> liftIO $ do
+--            let spn = Lexer.last_loc pState
+--            let e   = Lexer.errors pState
 
-          Lexer.PFailed pState  -> liftIO $ do
-            let spn = Lexer.last_loc pState
-            let e   = Lexer.errors pState
-
-            Handle.hPutStrLn stderr $ unlines
-              [ "Could not parse module: "
-              , fp2
-              , " (originally " <> fp <> ")"
-              , " because "  <> (show . bagToList $ fmap diagnosticMessage e)
-              , " src span ", show spn
-              ]
-            throwIO $ HscTypes.mkSrcErr $
-              diagnosticMessage <$> Lexer.getPsMessages pState
+--            Handle.hPutStrLn stderr $ unlines
+--              [ "Could not parse module: "
+--              , fp2
+--              , " (originally " <> fp <> ")"
+--              , " because "  <> (show . bagToList $ fmap diagnosticMessage e)
+--              , " src span ", show spn
+--              ]
+--            throwIO $ HscTypes.mkSrcErr $
+--              diagnosticMessage <$> Lexer.getPsMessages pState
     -- Extract the imports from the parsed module
     let imports' =
           map (\(SrcLoc.L _ idecl) ->
@@ -105,16 +106,28 @@ filterBOM = \case
       Just str' -> filterBOM str'
       Nothing -> x : filterBOM xs
 
-runParser :: DynFlags.DynFlags -> FilePath -> String -> Lexer.P a -> Lexer.ParseResult a
+type ParseResult a b = Either b a
+
+runParser :: DynFlags.DynFlags -> FilePath -> String -> Lexer.P a -> GHC.Ghc (ParseResult a b)
 runParser dynFlags filename str parser = do
-    Lexer.unP parser (parseState (Config.initParserOpts dynFlags))
-  where
-    location = SrcLoc.mkRealSrcLoc (FastString.mkFastString filename) 1 1
-    buffer = StringBuffer.stringToStringBuffer str
-
-    -- TODO: not DynFlags anymore. It's ParserOpts now. What's the relationship?
-    parseState flags = Lexer.initParserState flags buffer location
-
-
+  let location = SrcLoc.mkRealSrcLoc (FastString.mkFastString filename) 1 1
+      buffer = StringBuffer.stringToStringBuffer str
+      parseState flags = Lexer.initParserState flags buffer location
+      unliftedRes = Lexer.unP parser (parseState (Config.initParserOpts dynFlags))
+  case unliftedRes of
+    Lexer.POk _ res@(SrcLoc.L _ _) -> pure $ Right res
+    Lexer.PFailed pState  -> liftIO $ do
+      let spn = Lexer.last_loc pState
+      let e   = Lexer.errors pState
+      Handle.hPutStrLn stderr $ unlines
+        [ "Could not parse module: "
+        , filename
+        , " (originally " <> filename <> ")"
+        , " because "  <> (show . bagToList $ fmap diagnosticMessage e)
+        , " src span ", show spn
+        ]
+      throwIO $ HscTypes.mkSrcErr $
+        diagnosticMessage <$> Lexer.getPsMessages pState
+ 
 
 
