@@ -8,58 +8,24 @@ module Main (main) where
 import Control.Monad.IO.Class
 import Data.List (stripPrefix)
 
-
-
-
 import System.Environment
 import Control.Exception
 import qualified GHC
-
-
-
-
 import qualified GHC.IO.Handle.Text as Handle
-
-
 import qualified GHC.Hs.ImpExp as HsImpExp
-
-
-
-
-
 import qualified GHC.Hs as HsSyn
-
-
-
-
-
-
 import GHC.Data.Bag (bagToList)
-import qualified GHC.Parser.Errors.Ppr
-import qualified GHC.Driver.Config
 import qualified GHC.Parser.Lexer as Lexer
 import qualified GHC.Unit.Module.Name as Module
 import qualified GHC.Parser as Parser
 import qualified GHC.Driver.Pipeline as DriverPipeline
+import qualified GHC.Driver.Config.Parser as Config
 import qualified GHC.Data.Bag as Bag
 import qualified GHC.Data.StringBuffer as StringBuffer
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Driver.Session as DynFlags
 import qualified GHC.Types.SourceError as HscTypes
 import qualified GHC.Types.SrcLoc as SrcLoc
-
-
-
-
-
-
-
-
-
-
-
-
-
 import qualified System.Process as Process
 import System.IO (stderr)
 
@@ -97,26 +63,20 @@ main = do
         -- loaded
 
         (dflags2, fp2) <- liftIO $
-          either (error . show . Bag.bagToList) id <$> DriverPipeline.preprocess hsc_env fp Nothing Nothing
-
-
-
+          either (error . show) id <$> DriverPipeline.preprocess hsc_env fp Nothing Nothing
 
         _ <- GHC.setSessionDynFlags dflags2
 
+        dflags3 <- GHC.getSessionDynFlags
         -- Read the file that we want to parse
         str <- liftIO $ filterBOM <$> readFile fp2
 
-        runParser fp2 str Parser.parseModule >>= \case
+        runParser dflags3 fp2 str Parser.parseModule >>= \case
           Lexer.POk _ (SrcLoc.L _ res) -> pure res
 
           Lexer.PFailed pState  -> liftIO $ do
             let spn = Lexer.last_loc pState
             let e   = Lexer.errors pState
-
-
-
-
 
             Handle.hPutStrLn stderr $ unlines
               [ "Could not parse module: "
@@ -145,10 +105,9 @@ filterBOM = \case
       Just str' -> filterBOM str'
       Nothing -> x : filterBOM xs
 
-runParser :: FilePath -> String -> Lexer.P a -> Lexer.ParseResult a
-runParser filename str parser = do
-    dynFlags <- DynFlags.getDynFlags
-    pure $ Lexer.unP parser (parseState (initParserOpts dynFlags))
+runParser :: DynFlags.DynFlags -> FilePath -> String -> Lexer.P a -> Lexer.ParseResult a
+runParser dynFlags filename str parser = do
+    Lexer.unP parser (parseState (Config.initParserOpts dynFlags))
   where
     location = SrcLoc.mkRealSrcLoc (FastString.mkFastString filename) 1 1
     buffer = StringBuffer.stringToStringBuffer str
