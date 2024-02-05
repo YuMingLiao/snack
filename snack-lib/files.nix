@@ -3,6 +3,7 @@
 with (callPackage ./lib.nix { });
 with (callPackage ./attrset-lib.nix {});
 with lib.attrsets;
+with (import /root/nix-sandbox/CA_content_addressed/recursivelyReadDir.nix);
 with builtins; rec {
 
   # Takes a (string) filepath and creates a derivation for that file (and for
@@ -63,7 +64,7 @@ with builtins; rec {
      in go dir "";
   */
   #listFilesInDir and filesWithBaseInDir may be replaced by nix-freeze-files
-  listFilesInDir = dir: leaves (frozen dir);
+  listFilesInDir = dir: leaves (freezeFiles dir);
   listFilesInDir' = dir:
     dfsDAG {
       f = info@{ dir, dirName }:
@@ -83,7 +84,7 @@ with builtins; rec {
       dirName = "";
     }];
   # it's a mapping from files to its base
-  filesWithBaseInDir = base: replace (flatten (frozen base)) base; 
+  filesWithBaseInDir = base: replace (flatten (freezeFiles base)) base; 
   filesWithBaseInDir' = base:
     dfsDAG {
       f = info@{ dir, dirName }:

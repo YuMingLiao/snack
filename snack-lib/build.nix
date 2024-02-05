@@ -18,7 +18,7 @@ in rec {
     let
       traversed = buildModulesRec ghcWith { } mainModSpec.moduleImports;
       #TODO check if removeSuffix is useless
-      builtDeps = attrValues (mapAttrs (n: v: removeSuffix "${moduleToObject n}" v) (traceValSeq traversed));
+      builtDeps = attrValues (mapAttrs (n: v: removeSuffix "${moduleToObject n}" v) traversed);
       #objList = map (x: traversed.${x.moduleName}) mainModSpec.moduleImports;
       # XXX: the main modules need special handling regarding the object name
     in traversed // {
@@ -88,21 +88,12 @@ in rec {
   # track of which modules have been built already
   # XXX: doesn't work if several modules in the DAG have the same name
   buildModulesRec = ghcWith: empty: modSpecs:
-    let
-      debugTraversed = mn: trvrsd:
-        traceIf 
-          (mn == "ProjectM36.Server.project-m36-server")
-          { "ProjectM36.Server" = trvrsd."ProjectM36.Server";
-            "ProjectM36.Server.ParseArgs" = trvrsd."ProjectM36.Server.ParseArgs";
-          }        
-          trvrsd;
-    in
     dfsDAG {
       f = mod: traversed:
         let
           builtDeps = map (x:
             removeSuffix "${moduleToObject x.moduleName}"
-            (debugTraversed x.moduleName traversed).${x.moduleName}) (allTransitiveImports [ mod ]);
+            traversed.${x.moduleName}) (allTransitiveImports [ mod ]);
         in {
           "${mod.moduleName}" =
             "${buildModule ghcWith mod builtDeps}/${
@@ -160,18 +151,6 @@ in rec {
           (expected == actual)
           || (t == "directory" && (lib.strings.hasPrefix actual expected)))
         modSpec.moduleFiles) >= 1) base;
-
-     debugOut = 
-        if modSpec.moduleName == "ProjectM36.Server" 
-        then '' 
-          echo "out:"
-          ls $out 
-          ''
-        else if modSpec.moduleName == "ProjectM36.Server.ParseArgs" 
-        then ''echo "out:"; ls -R $out/;''
-        else if modSpec.moduleName == "Lib.Lib2.Lib2"
-        then ''echo "out:"; ls -R $out;'' else "";
-    
     in stdenv.mkDerivation {
       name = objectName;
       src = symlinkJoin {
