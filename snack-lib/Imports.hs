@@ -15,7 +15,7 @@ import qualified GHC.IO.Handle.Text as Handle
 import qualified GHC.Hs.ImpExp as HsImpExp
 import qualified GHC.Hs as HsSyn
 import qualified GHC.Parser.Lexer as Lexer
-import qualified GHC.Unit.Module.Name as Module
+import qualified GHC.Unit.Module as Module
 import qualified GHC.Parser as Parser
 import qualified GHC.Driver.Pipeline as DriverPipeline
 import qualified GHC.Driver.Config.Parser as Config

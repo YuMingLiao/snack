@@ -2,7 +2,7 @@
 # TODO: currently single out derivations prepend the PWD to the path
 # TODO: make sure that filters for "base" are airtight
 # TODO: document the sh*t out of these functions
-{ pkgs, ghc-version ? "ghc944"
+{ pkgs, ghc-version ? "ghc965"
 , ghcWithPackages ? pkgs.haskell.packages.${ghc-version}.ghcWithPackages
 , haskellPackages ? pkgs.haskell.packages.${ghc-version} }:
 

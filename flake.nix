@@ -1,0 +1,23 @@
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+  outputs = { self, nixpkgs, flake-utils}:
+    flake-utils.lib.eachDefaultSystem
+      (system:
+        let
+          overlays = [];
+          pkgs = import nixpkgs {
+            inherit system overlays;
+          };
+        in
+        with pkgs;
+        {
+          devShells.default = import ./shell.nix { inherit pkgs; }; 
+          # mkShell {
+          #   buildInputs = [ ];
+          # };
+        }
+      );
+}
