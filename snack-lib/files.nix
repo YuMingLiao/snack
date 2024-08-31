@@ -1,9 +1,9 @@
 # file related operations
-{ lib, stdenv, writeScript, callPackage}:
+{ pkgs, lib, stdenv, writeScript, callPackage}:
 with (callPackage ./lib.nix { });
 with (callPackage ./attrset-lib.nix {});
 with lib.attrsets;
-with (import ../../nix-sandbox/CA_content_addressed/fileset.nix);
+with (import ./fileset.nix { inherit pkgs; });
 with builtins; rec {
 
   # Takes a (string) filepath and creates a derivation for that file (and for

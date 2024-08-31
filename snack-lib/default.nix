@@ -9,7 +9,7 @@
 with pkgs;
 
 with (callPackage ./build.nix { inherit pkgs; });
-with (callPackage ./files.nix { });
+with (callPackage ./files.nix { inherit pkgs; });
 with (callPackage ./ghci.nix { });
 with (callPackage ./lib.nix { });
 with (callPackage ./modules.nix { });

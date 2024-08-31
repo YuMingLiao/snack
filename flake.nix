@@ -10,7 +10,7 @@
           overlays = [overlay];
           overlay = _: pkgs:
             { 
-              packages = pkgs.callPackages nix/packages.nix {};
+              packages = pkgs.callPackages nix/packages.nix { };
             };
 
           pkgs = import nixpkgs {
@@ -20,9 +20,6 @@
         with pkgs;
         {
           devShells.default = import ./shell.nix { inherit pkgs; }; 
-          # mkShell {
-          #   buildInputs = [ ];
-          # };
         }
       );
 }
