@@ -7,7 +7,12 @@
     flake-utils.lib.eachDefaultSystem
       (system:
         let
-          overlays = [];
+          overlays = [overlay];
+          overlay = _: pkgs:
+            { 
+              packages = pkgs.callPackages nix/packages.nix {};
+            };
+
           pkgs = import nixpkgs {
             inherit system overlays;
           };
