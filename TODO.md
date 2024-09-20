@@ -3,7 +3,7 @@ TODO
 - [x] understand what to do when you in the middle of development while your upstream updated.
 - [x] import parser doesn't use ghc with all packages, so -fversion-macros failed.
 - [x] my main is Tutoriald.tutd. exe is tutoriald.tutd. wierd.
-- [] content-addressed readDir may replace nix-freeze-files
+- [x] content-addressed readDir may replace nix-freeze-files
 #refactoring
 - [] DO I really need memo to speed up? I am confused. I just want to run base path first, once and for all. It seems not fit in lazy nix.
 - [] baseAndPkgSpec ... it seems PkgSpec are the same.

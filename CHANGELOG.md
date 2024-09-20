@@ -27,6 +27,7 @@ Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 - The `--cores` was replaced with `--jobs`
 - The default GHC version is now 8.4.4.
 - The default GHC version is now 8.6.4.
+- The default GHC version is now 9.6.5.
 
 ### Fixed
 - The module import parsing when the CPP extension is enabled.
