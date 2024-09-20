@@ -34,24 +34,10 @@
         "type": "github"
       }
     },
-    "nixpkgs-19-03": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1567364308,
-        "narHash": "sha256-+SE5vBGZWw59Mgk2dUOQQy4m3JE+dPGb4SOrXMecN0s=",
-        "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/80bda4933272f7e244dc9702f39d18433988cdd0.tar.gz"
-      },
-      "original": {
-        "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/80bda4933272f7e244dc9702f39d18433988cdd0.tar.gz"
-      }
-    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs",
-        "nixpkgs-19-03": "nixpkgs-19-03"
+        "nixpkgs": "nixpkgs"
       }
     },
     "systems": {
