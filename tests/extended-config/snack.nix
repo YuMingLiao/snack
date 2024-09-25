@@ -1,4 +1,4 @@
 rec {
-  pkgs = import ./nix;
+  pkgs = import <nixpkgs> {};
   ghcWithPackages = pkgs.haskellPackages.ghcWithPackages;
 }
