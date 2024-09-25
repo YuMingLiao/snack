@@ -2,11 +2,11 @@
 with pkgs;
 let
   any-paths = stdenv.mkDerivation rec {
+    requiredSystemFeatures = [ "recursive-nix" ];
     name = "any-paths";
     src = ./any-paths;
-    builder = ./any-paths/test;
-    nativeBuildInputs = [ packages.snack-exe coreutils nix];
-  }; 
+    buildPhase = builtins.readFile ./any-paths/test;
+    buildInputs = [ packages.snack-exe nix ];
+    LANG = "en_US.UTF-8";
+  };
 in any-paths
-
-# failed because testing snack in nix would be a recursive nix.

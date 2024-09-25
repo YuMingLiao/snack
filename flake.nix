@@ -13,6 +13,7 @@
 
         pkgs = import nixpkgs { inherit system overlays; };
       in with pkgs; {
+        packages.default = import ./tests/tests.nix { inherit pkgs; };
         devShells.default = import ./shell.nix { inherit pkgs; };
         checks = {
           my-check = import ./tests/tests.nix { inherit pkgs; };
