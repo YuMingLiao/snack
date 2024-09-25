@@ -407,7 +407,8 @@ nixBuild snackCfg extraNixArgs nixExpr =
         |]
     cliArgs :: [T.Text]
     cliArgs =
-      [ "-" -- read expression from stdin
+      [ "--extra-experimental-features", "ca-derivations"
+      , "-" -- read expression from stdin
       , "--no-out-link" -- no need for roots
       -- how many jobs to run concurrently (-j)
       , "--max-jobs", T.pack (nJobsValue (nixNJobs nixCfg))
