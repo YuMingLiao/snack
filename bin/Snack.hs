@@ -408,6 +408,8 @@ nixBuild snackCfg extraNixArgs nixExpr =
     cliArgs :: [T.Text]
     cliArgs =
       [ "--extra-experimental-features", "ca-derivations"
+      , "--no-sandbox"
+      , "--extra-sandbox-paths", "/var/run/nscd/socket=/var/run/nscd/socket"
       , "-" -- read expression from stdin
       , "--no-out-link" -- no need for roots
       -- how many jobs to run concurrently (-j)
