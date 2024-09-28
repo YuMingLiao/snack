@@ -13,9 +13,10 @@
       system:
       let
         overlays = [ overlay ];
-        overlay = prev: pkgs: {
-          packages = pkgs.callPackages nix/packages.nix { };
+        overlay = final: prev: {
+          packages = prev.callPackages nix/packages.nix { };
         };
+        #pkgs = nixpkgs.legacyPackages.${system}.extend overlay;
         pkgs = import nixpkgs { inherit system overlays; };
       in
       with pkgs;
@@ -23,7 +24,6 @@
         devShells.default = import ./shell.nix { inherit pkgs; };
         packages.default = self.checks.${system}.check-download;
         checks = {
-          my-check = import ./tests/tests.nix { inherit pkgs; };
           check-snack-package-file-arg = stdenv.mkDerivation {
             requiredSystemFeatures = [ "recursive-nix" ];
             name = "check-snack-package-file-arg";
