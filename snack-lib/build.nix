@@ -40,7 +40,7 @@ in rec {
       objList = attrValues objAttrs;
       deps = allTransitiveDeps [ moduleSpec ];
       ghc = ghcWith deps;
-      ghcOptsArgs = lib.strings.escapeShellArgs (moduleSpec.moduleGhcOpts ++ (if pkgs.targetPlatform.isMusl then staticLinkingArgs else []));
+      ghcOptsArgs = lib.strings.escapeShellArgs (moduleSpec.moduleGhcOpts ++ (if pkgs.stdenv.targetPlatform.isMusl then staticLinkingArgs else []));
       exts = moduleSpec.moduleExtensions;
       packageList = map (p: "-package ${p}") deps;
       relExePath = "bin/${name}";
