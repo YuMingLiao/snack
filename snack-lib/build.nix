@@ -65,12 +65,18 @@ in rec {
       else
         "";
 
+      src = symlinkJoin {
+        name = "${name}-extra-files";
+        paths = moduleSpec.moduleDirectories;
+        __contentAddressed = true;
+      };
+ 
 
         drv = runCommand name { buildInputs = [ lndir rsync]; } ''
         echo "Start linking Main Module...${moduleSpec.moduleName} to ${name}"
         mkdir -p $out/bin
         mkdir -p $out/share
-        ${copyCBitsFiles}
+        cp ${src}/* .
         ${ghc}/bin/ghc \
           ${lib.strings.escapeShellArgs packageList} \
           ${lib.strings.escapeShellArgs objList} \
