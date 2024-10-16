@@ -1,0 +1,1 @@
+{ ma, mb, dist } is ok while Snack.hs could not decode { obj = {}; dist = "";}
