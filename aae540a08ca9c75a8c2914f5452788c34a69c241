@@ -4,3 +4,5 @@ It occurs to me that even if I flakify a snack-built haskell project,
 the whole part is still be re-evaluted and then cached.
 Unless ... not sure how flake granularity should be. (unison langauge seems have a way with it.)
 A. Content-addressed nix shoulde be enough to cache sub evaluation. No need for flake.
+
+[ ] snack-lib and snack-executable is enough to create compiled lib and exe, no need for Snack.hs. So parameterised package.nix and a snack-built-haskell-project flake is definitely viable.
