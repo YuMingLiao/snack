@@ -1,4 +1,5 @@
 TODO
+- [ ] cohesion vs coupling, module vs package, snack should help this kind of issue.
 - [x] check if it still works.
 - [x] understand what to do when you in the middle of development while your upstream updated.
 - [x] import parser doesn't use ghc with all packages, so -fversion-macros failed.
