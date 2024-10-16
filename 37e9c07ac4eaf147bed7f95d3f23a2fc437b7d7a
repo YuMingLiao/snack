@@ -1,0 +1,2 @@
+* bin/packages.nix's import ./nix results in the flag --impure.
+  Should packages.nix be a flake?
