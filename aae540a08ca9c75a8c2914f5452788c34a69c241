@@ -1,1 +1,3 @@
 check-snack-package-file-arg build failure. And I don't car.
+
+It occurs to me that even if I flakify a snack-built haskell project, the delta is still be re-evaluted and then cached.
