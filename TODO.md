@@ -1,4 +1,5 @@
 TODO
+- [ ] collect hie at the end of a library for calligraphy
 - [ ] cohesion vs coupling, module vs package, snack should help this kind of issue.
 - [x] check if it still works.
 - [x] understand what to do when you in the middle of development while your upstream updated.
